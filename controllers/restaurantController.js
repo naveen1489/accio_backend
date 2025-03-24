@@ -1,18 +1,50 @@
 'use strict';
 
-const { Restaurant } = require('../models/restaurant');
+const { Restaurant } = require('../models');
 
 // Add Restaurant Partner
 exports.addRestaurantPartner = async (req, res) => {
     try {
-        const { name, location, owner } = req.body;
+        const {
+            companyName,
+            nameTitle,
+            name,
+            countryCode,
+            contactNumber,
+            emailId,
+            status,
+            addressLine1,
+            addressLine2,
+            city,
+            state,
+            postalCode,
+            country,
+            latitude,
+            longitude
+        } = req.body;
 
         // Check if the restaurant already exists
-        const existingRestaurant = await Restaurant.findOne({ where: { name } });
+        const existingRestaurant = await Restaurant.findOne({ where: { emailId } });
         if (existingRestaurant) return res.status(400).json({ message: 'Restaurant already exists' });
 
         // Create the restaurant
-        const restaurant = await Restaurant.create({ name, location, owner });
+        const restaurant = await Restaurant.create({
+            companyName,
+            nameTitle,
+            name,
+            countryCode,
+            contactNumber,
+            emailId,
+            status,
+            addressLine1,
+            addressLine2,
+            city,
+            state,
+            postalCode,
+            country,
+            latitude,
+            longitude
+        });
 
         res.status(201).json({ message: 'Restaurant partner added successfully', restaurant });
     } catch (error) {
@@ -51,15 +83,43 @@ exports.getRestaurantById = async (req, res) => {
 exports.updateRestaurant = async (req, res) => {
     try {
         const { id } = req.params;
-        const { name, location, owner } = req.body;
+        const {
+            companyName,
+            nameTitle,
+            name,
+            countryCode,
+            contactNumber,
+            emailId,
+            status,
+            addressLine1,
+            addressLine2,
+            city,
+            state,
+            postalCode,
+            country,
+            latitude,
+            longitude
+        } = req.body;
 
         const restaurant = await Restaurant.findByPk(id);
         if (!restaurant) return res.status(404).json({ message: 'Restaurant not found' });
 
         // Update fields if provided
+        restaurant.companyName = companyName || restaurant.companyName;
+        restaurant.nameTitle = nameTitle || restaurant.nameTitle;
         restaurant.name = name || restaurant.name;
-        restaurant.location = location || restaurant.location;
-        restaurant.owner = owner || restaurant.owner;
+        restaurant.countryCode = countryCode || restaurant.countryCode;
+        restaurant.contactNumber = contactNumber || restaurant.contactNumber;
+        restaurant.emailId = emailId || restaurant.emailId;
+        restaurant.status = status || restaurant.status;
+        restaurant.addressLine1 = addressLine1 || restaurant.addressLine1;
+        restaurant.addressLine2 = addressLine2 || restaurant.addressLine2;
+        restaurant.city = city || restaurant.city;
+        restaurant.state = state || restaurant.state;
+        restaurant.postalCode = postalCode || restaurant.postalCode;
+        restaurant.country = country || restaurant.country;
+        restaurant.latitude = latitude || restaurant.latitude;
+        restaurant.longitude = longitude || restaurant.longitude;
 
         await restaurant.save();
 
