@@ -46,7 +46,7 @@ exports.addRestaurantPartner = async (req, res) => {
             longitude
         });
 
-        res.status(201).json({ message: 'Restaurant partner added successfully', restaurant });
+        res.status(200).json({ message: 'Restaurant partner added successfully', restaurant });
     } catch (error) {
         console.error('Error adding restaurant partner:', error);
         res.status(500).json({ message: 'Internal server error', error });
