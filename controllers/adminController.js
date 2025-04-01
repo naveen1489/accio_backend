@@ -32,7 +32,7 @@ exports.addCategory = async (req, res) => {
             }
         }
 
-        res.status(201).json({ message: 'Category added successfully', category });
+        res.status(200).json({ message: 'Category added successfully', category });
     } catch (error) {
         console.error('Error adding category:', error);
         res.status(500).json({ message: 'Internal server error', error });

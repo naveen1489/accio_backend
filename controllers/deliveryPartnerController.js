@@ -29,7 +29,7 @@ exports.addDeliveryPartner = async (req, res) => {
       restaurantId,
     });
 
-    res.status(201).json({ message: 'Delivery partner added successfully', deliveryPartner: newPartner });
+    res.status(200).json({ message: 'Delivery partner added successfully', deliveryPartner: newPartner });
   } catch (error) {
     console.error('Error adding delivery partner:', error);
     res.status(500).json({ message: 'Internal server error', error });
@@ -57,7 +57,7 @@ exports.assignDelivery = async (req, res) => {
       status: 'Assigned',
     });
 
-    res.status(201).json({ message: 'Delivery assigned successfully', delivery });
+    res.status(200).json({ message: 'Delivery assigned successfully', delivery });
   } catch (error) {
     console.error('Error assigning delivery:', error);
     res.status(500).json({ message: 'Internal server error', error });
