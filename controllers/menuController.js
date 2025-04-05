@@ -39,6 +39,15 @@ exports.createMenu = async (req, res) => {
             }
         }
 
+        // Create a notification for the admin
+        await NotificationService.createNotification({
+            ReceiverId: 'admin-id', // Replace with the actual admin ID
+            SenderId: restaurantId, // The restaurant ID is the sender
+            NotificationMessage: `A new menu "${menuName}" has been created by restaurant "${restaurant.name}".`,
+            NotificationType: 'menu_creation',
+            NotificationMetadata: { menuId: menu.id }
+        });
+
         res.status(201).json({ message: 'Menu created successfully', menu });
     } catch (error) {
         console.error('Error creating menu:', error);
@@ -85,13 +94,21 @@ exports.updateMenu = async (req, res) => {
             }
         }
 
+        // Create a notification for the admin
+        await NotificationService.createNotification({
+            ReceiverId: 'admin-id', // Replace with the actual admin ID
+            SenderId: menu.restaurantId, // The restaurant ID is the sender
+            NotificationMessage: `The menu "${menuName}" has been updated.`,
+            NotificationType: 'menu_update',
+            NotificationMetadata: { menuId: menu.id }
+        });
+
         res.status(200).json({ message: 'Menu updated successfully', menu });
     } catch (error) {
         console.error('Error updating menu:', error);
         res.status(500).json({ message: 'Internal server error', error });
     }
 };
-
 // Delete a menu
 exports.deleteMenu = async (req, res) => {
     try {
