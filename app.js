@@ -18,6 +18,7 @@ const subscriptionRoutes = require('./routes/subscriptionRoutes');
 const adminRoutes = require('./routes/adminRoutes');
 const menuRoutes = require('./routes/menuRoutes'); // Import menu routes
 const notificationRoutes = require('./routes/notificationRoutes'); // Import notification routes
+const statisticRoutes = require('./routes/statisticRoutes'); // Import statistic routes
 
 const app = express();
 
@@ -34,6 +35,7 @@ app.use('/api/subscriptions', subscriptionRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/menus', menuRoutes); // Add menu routes
 app.use('/api/notifications', notificationRoutes); // Add notification routes
+app.use('/api/statistics', statisticRoutes); // Add statistic routes
 
 // Default route
 app.get('/', (req, res) => {
