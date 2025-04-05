@@ -16,6 +16,7 @@ const restaurantRoutes = require('./routes/restaurantRoutes');
 const deliveryPartnerRoutes = require('./routes/deliveryPartnerRoutes');
 const subscriptionRoutes = require('./routes/subscriptionRoutes');
 const adminRoutes = require('./routes/adminRoutes');
+const menuRoutes = require('./routes/menuRoutes'); // Import menu routes
 
 const app = express();
 
@@ -30,6 +31,7 @@ app.use('/api/restaurants', restaurantRoutes);
 app.use('/api/delivery-partners', deliveryPartnerRoutes);
 app.use('/api/subscriptions', subscriptionRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/menus', menuRoutes); // Add menu routes
 
 // Default route
 app.get('/', (req, res) => {
