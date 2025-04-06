@@ -299,7 +299,13 @@ exports.addOrUpdateMenuReview = async (req, res) => {
             });
         }
 
-        res.status(200).json({ message: 'Menu review updated successfully', menuReview });
+        // Update the status in the Menu table
+        if (status) {
+            menu.status = status;
+            await menu.save();
+        }
+
+        res.status(200).json({ message: 'Menu review updated successfully', menuReview, menu });
     } catch (error) {
         console.error('Error updating menu review:', error);
         res.status(500).json({ message: 'Internal server error', error });
