@@ -1,7 +1,8 @@
 'use strict';
 
-const { Menu, MenuCategory, MenuItem, Restaurant } = require('../models');
-const NotificationService = require('../services/notificationService');
+const { Menu, MenuCategory, MenuItem, Restaurant, Notification  } = require('../models');
+
+//const NotificationService = require('../services/notificationService');
 
 // Create a new menu
 exports.createMenu = async (req, res) => {
@@ -43,8 +44,8 @@ exports.createMenu = async (req, res) => {
         }
 
         // Create a notification for the admin
-        await NotificationService.createNotification({
-            ReceiverId: 'admin-id', // Replace with the actual admin ID
+        await Notification.create({
+            ReceiverId: '988b76f8-66e6-4d5c-ab5b-01257395c1c6', // Replace with the actual admin ID
             SenderId: restaurantId, // The restaurant ID is the sender
             NotificationMessage: `A new menu "${menuName}" has been created by restaurant "${restaurant.name}".`,
             NotificationType: 'menu_creation',
