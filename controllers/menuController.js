@@ -1,6 +1,7 @@
 'use strict';
 
 const { Menu, MenuCategory, MenuItem, Restaurant } = require('../models');
+const NotificationService = require('../services/notificationService');
 
 // Create a new menu
 exports.createMenu = async (req, res) => {
@@ -25,13 +26,15 @@ exports.createMenu = async (req, res) => {
             for (const menuCategory of menuCategories) {
                 const createdMenuCategory = await MenuCategory.create({
                     menuId: menu.id,
-                    categoryName: menuCategory.categoryName
+                    categoryName: menuCategory.categoryName,
+                    day: menuCategory.day // New field
                 });
 
                 if (menuCategory.menuItems && menuCategory.menuItems.length > 0) {
                     for (const menuItem of menuCategory.menuItems) {
                         await MenuItem.create({
                             menuCategoryId: createdMenuCategory.id,
+                            itemCategory: menuItem.itemCategory, // New field
                             itemName: menuItem.itemName
                         });
                     }

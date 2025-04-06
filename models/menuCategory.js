@@ -26,6 +26,13 @@ module.exports = (sequelize, DataTypes) => {
         categoryName: {
             type: DataTypes.STRING,
             allowNull: false
+        },
+        day: { // New field
+            type: DataTypes.STRING,
+            allowNull: false, // Set to false if this field is required
+            validate: {
+                isIn: [['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']] // Restrict to valid days
+            }
         }
     }, {
         sequelize,

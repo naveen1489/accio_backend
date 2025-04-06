@@ -30,6 +30,11 @@ module.exports = (sequelize, DataTypes) => {
         restaurantId: {
             type: DataTypes.UUID,
             allowNull: false
+        },
+        status: { // New field
+            type: DataTypes.ENUM('Pending', 'Approved', 'Declined'),
+            allowNull: false,
+            defaultValue: 'Pending' // Default value
         }
     }, {
         sequelize,

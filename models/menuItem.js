@@ -7,8 +7,6 @@ module.exports = (sequelize, DataTypes) => {
         static associate(models) {
             // A MenuItem belongs to a MenuCategory
             MenuItem.belongsTo(models.MenuCategory, { foreignKey: 'menuCategoryId', as: 'menuCategory' });
-
-            // A MenuItem has an itemName
         }
     }
 
@@ -21,6 +19,10 @@ module.exports = (sequelize, DataTypes) => {
         menuCategoryId: {
             type: DataTypes.UUID,
             allowNull: false
+        },
+        itemCategory: { // New field
+            type: DataTypes.STRING,
+            allowNull: true // Set to true if this field is optional
         },
         itemName: {
             type: DataTypes.STRING,
