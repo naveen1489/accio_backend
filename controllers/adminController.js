@@ -61,12 +61,34 @@ exports.getAllCategories = async (req, res) => {
 };
 
 // Update Category
+exports.updateCategory1 = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { categoryName, vegNonVeg, description, status ,itemCategories} = req.body;
+
+        const category = await Category.findByPk(id);
+        if (!category) return res.status(404).json({ message: 'Category not found' });
+
+        category.categoryName = categoryName || category.categoryName;
+        category.vegNonVeg = vegNonVeg || category.vegNonVeg;
+        category.description = description || category.description;
+        category.status = status || category.status;
+        category.itemCategories = itemCategories || category.itemCategories;
+        await category.save();
+
+        res.status(200).json({ message: 'Category updated successfully', category });
+    } catch (error) {
+        console.error('Error updating category:', error);
+        res.status(500).json({ message: 'Internal server error', error });
+    }
+};
+// Update Category by Deleting Old Record and Adding New One
 exports.updateCategory = async (req, res) => {
     try {
         const { id } = req.params;
         const { categoryName, vegNonVeg, description, status, itemCategories } = req.body;
 
-        // Find the category
+        // Validate if the category exists
         const category = await Category.findByPk(id, {
             include: {
                 model: ItemCategory,
@@ -78,92 +100,48 @@ exports.updateCategory = async (req, res) => {
             }
         });
 
-        if (!category) return res.status(404).json({ message: 'Category not found' });
+        if (!category) {
+            return res.status(404).json({ message: 'Category not found' });
+        }
 
-        // Update category details
-        category.categoryName = categoryName || category.categoryName;
-        category.vegNonVeg = vegNonVeg || category.vegNonVeg;
-        category.description = description || category.description;
-        category.status = status || category.status;
-        await category.save();
+        // Delete the existing category and its associations
+        await category.destroy();
 
-        // Update itemCategories
+        // Create a new category with the updated data
+        const newCategory = await Category.create({
+            categoryName,
+            vegNonVeg,
+            description,
+            status
+        });
+
+        // Add itemCategories and items
         if (itemCategories && itemCategories.length > 0) {
-            // Track existing itemCategory IDs
-            const existingItemCategoryIds = category.itemCategories.map(ic => ic.id);
-
             for (const itemCategory of itemCategories) {
-                if (itemCategory.id) {
-                    // Update existing itemCategory
-                    if (existingItemCategoryIds.includes(itemCategory.id)) {
-                        const existingItemCategory = await ItemCategory.findByPk(itemCategory.id, {
-                            include: { model: Item, as: 'items' }
+                const createdItemCategory = await ItemCategory.create({
+                    categoryId: newCategory.id,
+                    itemCategoryName: itemCategory.itemCategoryName
+                });
+
+                if (itemCategory.items && itemCategory.items.length > 0) {
+                    for (const itemName of itemCategory.items) {
+                        // Normalize itemName if it's a string
+                        const normalizedItemName = typeof itemName === 'string' ? itemName : itemName.itemName;
+
+                        if (!normalizedItemName || normalizedItemName.trim() === '') {
+                            return res.status(400).json({ message: 'Item name cannot be null or empty' });
+                        }
+
+                        await Item.create({
+                            itemCategoryId: createdItemCategory.id,
+                            itemName: normalizedItemName
                         });
-
-                        existingItemCategory.itemCategoryName = itemCategory.itemCategoryName || existingItemCategory.itemCategoryName;
-                        await existingItemCategory.save();
-
-                        // Update items in the itemCategory
-                        if (itemCategory.items && itemCategory.items.length > 0) {
-                            const existingItemIds = existingItemCategory.items.map(item => item.id);
-
-                            for (const item of itemCategory.items) {
-                                if (item.id) {
-                                    // Update existing item
-                                    if (existingItemIds.includes(item.id)) {
-                                        const existingItem = await Item.findByPk(item.id);
-                                        existingItem.itemName = item.itemName || existingItem.itemName;
-                                        await existingItem.save();
-                                    }
-                                } else {
-                                    // Add new item
-                                    await Item.create({
-                                        itemCategoryId: existingItemCategory.id,
-                                        itemName: item.itemName
-                                    });
-                                }
-                            }
-
-                            // Remove items that are no longer in the updated list
-                            const updatedItemIds = itemCategory.items.map(item => item.id).filter(id => id);
-                            await Item.destroy({
-                                where: {
-                                    id: { [Op.notIn]: updatedItemIds },
-                                    itemCategoryId: existingItemCategory.id
-                                }
-                            });
-                        }
-                    }
-                } else {
-                    // Add new itemCategory
-                    const newItemCategory = await ItemCategory.create({
-                        categoryId: category.id,
-                        itemCategoryName: itemCategory.itemCategoryName
-                    });
-
-                    // Add items to the new itemCategory
-                    if (itemCategory.items && itemCategory.items.length > 0) {
-                        for (const item of itemCategory.items) {
-                            await Item.create({
-                                itemCategoryId: newItemCategory.id,
-                                itemName: item.itemName
-                            });
-                        }
                     }
                 }
             }
-
-            // Remove itemCategories that are no longer in the updated list
-            const updatedItemCategoryIds = itemCategories.map(ic => ic.id).filter(id => id);
-            await ItemCategory.destroy({
-                where: {
-                    id: { [Op.notIn]: updatedItemCategoryIds },
-                    categoryId: category.id
-                }
-            });
         }
 
-        res.status(200).json({ message: 'Category updated successfully', category });
+        res.status(200).json({ message: 'Category updated successfully', category: newCategory });
     } catch (error) {
         console.error('Error updating category:', error);
         res.status(500).json({ message: 'Internal server error', error });
