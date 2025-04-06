@@ -24,6 +24,6 @@ router.get('/all', menuController.getAllMenusWithPagination);
 // Get menu by ID
 router.get('/:id', authenticateToken, menuController.getMenuById);
 
-
+router.post('/menu/review', menuController.addOrUpdateMenuReview);
 
 module.exports = router;

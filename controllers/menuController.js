@@ -1,6 +1,6 @@
 'use strict';
 
-const { Menu, MenuCategory, MenuItem, Restaurant, Notification  } = require('../models');
+const { Menu, MenuCategory, MenuItem, Restaurant, Notification, MenuReview  } = require('../models');
 
 //const NotificationService = require('../services/notificationService');
 
@@ -259,6 +259,49 @@ exports.getAllMenusWithPagination = async (req, res) => {
         });
     } catch (error) {
         console.error('Error fetching menus with pagination:', error);
+        res.status(500).json({ message: 'Internal server error', error });
+    }
+};
+
+
+
+// Add or update menu review status
+exports.addOrUpdateMenuReview = async (req, res) => {
+    try {
+        const { menuId, restaurantId, status, adminComment } = req.body;
+
+        // Validate menu and restaurant existence
+        const menu = await Menu.findByPk(menuId);
+        if (!menu) {
+            return res.status(404).json({ message: 'Menu not found' });
+        }
+
+        const restaurant = await Restaurant.findByPk(restaurantId);
+        if (!restaurant) {
+            return res.status(404).json({ message: 'Restaurant not found' });
+        }
+
+        // Check if a review already exists for this menu
+        let menuReview = await MenuReview.findOne({ where: { menuId, restaurantId } });
+
+        if (menuReview) {
+            // Update existing review
+            menuReview.status = status || menuReview.status;
+            menuReview.adminComment = adminComment || menuReview.adminComment;
+            await menuReview.save();
+        } else {
+            // Create a new review
+            menuReview = await MenuReview.create({
+                menuId,
+                restaurantId,
+                status,
+                adminComment
+            });
+        }
+
+        res.status(200).json({ message: 'Menu review updated successfully', menuReview });
+    } catch (error) {
+        console.error('Error updating menu review:', error);
         res.status(500).json({ message: 'Internal server error', error });
     }
 };
