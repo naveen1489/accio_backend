@@ -20,7 +20,10 @@ router.get('/restaurant/:restaurantId', authenticateToken, menuController.getMen
 // Get all menus by status (veg or non-veg)
 router.get('/status/:status', authenticateToken, menuController.getMenusByStatus);
 
+router.get('/all', menuController.getAllMenusWithPagination);
 // Get menu by ID
 router.get('/:id', authenticateToken, menuController.getMenuById);
+
+
 
 module.exports = router;

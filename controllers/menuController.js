@@ -167,7 +167,7 @@ exports.getMenusByStatus = async (req, res) => {
         const { status } = req.params;
 
         const menus = await Menu.findAll({
-            where: { vegNonVeg: status },
+            where: { status: status },
             include: {
                 model: MenuCategory,
                 as: 'menuCategories',
@@ -208,6 +208,57 @@ exports.getMenuById = async (req, res) => {
         res.status(200).json(menu);
     } catch (error) {
         console.error('Error fetching menu by ID:', error);
+        res.status(500).json({ message: 'Internal server error', error });
+    }
+};
+
+// Get all menus with pagination
+exports.getAllMenusWithPagination = async (req, res) => {
+    try {
+        const { page = 1, limit = 10 } = req.query; // Default to page 1 and limit 10
+
+        // Ensure page and limit are integers
+        const pageNumber = parseInt(page, 10);
+        const limitNumber = parseInt(limit, 10);
+
+        if (isNaN(pageNumber) || pageNumber < 1) {
+            return res.status(400).json({ message: 'Invalid page number. Page must be a positive integer.' });
+        }
+
+        if (isNaN(limitNumber) || limitNumber < 1) {
+            return res.status(400).json({ message: 'Invalid limit. Limit must be a positive integer.' });
+        }
+
+        // Calculate offset
+        const offset = (pageNumber - 1) * limitNumber;
+
+        // Fetch menus with pagination
+        const { count: totalMenus, rows: menus } = await Menu.findAndCountAll({
+            limit: limitNumber,
+            offset: offset,
+            include: {
+                model: MenuCategory,
+                as: 'menuCategories',
+                include: {
+                    model: MenuItem,
+                    as: 'menuItems'
+                }
+            },
+            distinct: true // Ensure distinct count of menus
+        });
+
+        // Calculate total pages
+        const totalPages = Math.ceil(totalMenus / limitNumber);
+
+        // Return paginated response
+        res.status(200).json({
+            totalMenus,
+            totalPages,
+            currentPage: pageNumber,
+            menus
+        });
+    } catch (error) {
+        console.error('Error fetching menus with pagination:', error);
         res.status(500).json({ message: 'Internal server error', error });
     }
 };
