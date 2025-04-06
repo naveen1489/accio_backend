@@ -7,7 +7,7 @@ const { Menu, MenuCategory, MenuItem, Restaurant, Notification, MenuReview  } = 
 // Create a new menu
 exports.createMenu = async (req, res) => {
     try {
-        const { menuName, vegNonVeg, restaurantId, menuCategories } = req.body;
+        const { menuName, vegNonVeg, restaurantId, menuCategories ,price} = req.body;
 
         // Check if the restaurant exists
         const restaurant = await Restaurant.findByPk(restaurantId);
@@ -19,7 +19,8 @@ exports.createMenu = async (req, res) => {
         const menu = await Menu.create({
             menuName,
             vegNonVeg,
-            restaurantId
+            restaurantId,
+            price
         });
 
         // Add menu categories and items
@@ -63,7 +64,7 @@ exports.createMenu = async (req, res) => {
 exports.updateMenu = async (req, res) => {
     try {
         const { id } = req.params;
-        const { menuName, vegNonVeg, menuCategories } = req.body;
+        const { menuName, vegNonVeg, menuCategories,price } = req.body;
 
         // Find the menu
         const menu = await Menu.findByPk(id);
@@ -74,6 +75,7 @@ exports.updateMenu = async (req, res) => {
         // Update menu details
         menu.menuName = menuName || menu.menuName;
         menu.vegNonVeg = vegNonVeg || menu.vegNonVeg;
+        menu.price = price || menu.price;
         await menu.save();
 
         // Update menu categories and items

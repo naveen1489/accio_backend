@@ -35,7 +35,15 @@ module.exports = (sequelize, DataTypes) => {
             type: DataTypes.ENUM('Pending', 'Approved', 'Declined'),
             allowNull: false,
             defaultValue: 'Pending' // Default value
+        },
+        price: { // New field
+            type: DataTypes.FLOAT,
+            allowNull: false,
+            validate: {
+                min: 0 // Ensure price is non-negative
+            }
         }
+
     }, {
         sequelize,
         modelName: 'Menu',
