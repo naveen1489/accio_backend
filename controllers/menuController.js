@@ -140,10 +140,12 @@ exports.deleteMenu = async (req, res) => {
 };
 
 // Get all menus by restaurant
+
 exports.getMenusByRestaurant = async (req, res) => {
     try {
         const { restaurantId } = req.params;
 
+        // Fetch menus for the restaurant
         const menus = await Menu.findAll({
             where: { restaurantId },
             include: [
@@ -162,7 +164,21 @@ exports.getMenusByRestaurant = async (req, res) => {
             ]
         });
 
-        res.status(200).json(menus);
+        // Fetch MenuReview data for each menu
+        const menusWithReviews = await Promise.all(
+            menus.map(async (menu) => {
+                const menuReviews = await MenuReview.findAll({
+                    where: { menuId: menu.id }
+                });
+
+                return {
+                    ...menu.toJSON(),
+                    menuReviews // Add menuReviews to the menu object
+                };
+            })
+        );
+
+        res.status(200).json(menusWithReviews);
     } catch (error) {
         console.error('Error fetching menus by restaurant:', error);
         res.status(500).json({ message: 'Internal server error', error });
@@ -175,7 +191,7 @@ exports.getMenusByStatus = async (req, res) => {
         const { status } = req.params;
 
         const menus = await Menu.findAll({
-            where: { status: status },
+            where: { status },
             include: [
                 {
                     model: MenuCategory,
@@ -192,13 +208,26 @@ exports.getMenusByStatus = async (req, res) => {
             ]
         });
 
-        res.status(200).json(menus);
+        // Fetch MenuReview data for each menu
+        const menusWithReviews = await Promise.all(
+            menus.map(async (menu) => {
+                const menuReviews = await MenuReview.findAll({
+                    where: { menuId: menu.id }
+                });
+
+                return {
+                    ...menu.toJSON(),
+                    menuReviews // Add menuReviews to the menu object
+                };
+            })
+        );
+
+        res.status(200).json(menusWithReviews);
     } catch (error) {
         console.error('Error fetching menus by status:', error);
         res.status(500).json({ message: 'Internal server error', error });
     }
 };
-
 // Get menu by ID
 exports.getMenuById = async (req, res) => {
     try {
@@ -225,7 +254,15 @@ exports.getMenuById = async (req, res) => {
             return res.status(404).json({ message: 'Menu not found' });
         }
 
-        res.status(200).json(menu);
+        // Fetch MenuReview data for the menu
+        const menuReviews = await MenuReview.findAll({
+            where: { menuId: menu.id }
+        });
+
+        res.status(200).json({
+            ...menu.toJSON(),
+            menuReviews // Add menuReviews to the response
+        });
     } catch (error) {
         console.error('Error fetching menu by ID:', error);
         res.status(500).json({ message: 'Internal server error', error });
@@ -270,13 +307,27 @@ exports.getAllMenusWithPagination = async (req, res) => {
             distinct: true // Ensure distinct count of menus
         });
 
+        // Fetch MenuReview data for each menu
+        const menusWithReviews = await Promise.all(
+            menus.map(async (menu) => {
+                const menuReviews = await MenuReview.findAll({
+                    where: { menuId: menu.id }
+                });
+
+                return {
+                    ...menu.toJSON(),
+                    menuReviews // Add menuReviews to the menu object
+                };
+            })
+        );
+
         const totalPages = Math.ceil(totalMenus / limitNumber);
 
         res.status(200).json({
             totalMenus,
             totalPages,
             currentPage: pageNumber,
-            menus
+            menus: menusWithReviews
         });
     } catch (error) {
         console.error('Error fetching menus with pagination:', error);
