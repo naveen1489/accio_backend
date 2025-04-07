@@ -146,14 +146,20 @@ exports.getMenusByRestaurant = async (req, res) => {
 
         const menus = await Menu.findAll({
             where: { restaurantId },
-            include: {
-                model: MenuCategory,
-                as: 'menuCategories',
-                include: {
-                    model: MenuItem,
-                    as: 'menuItems'
+            include: [
+                {
+                    model: MenuCategory,
+                    as: 'menuCategories',
+                    include: {
+                        model: MenuItem,
+                        as: 'menuItems'
+                    }
+                },
+                {
+                    model: Restaurant,
+                    as: 'restaurant' // Include restaurant data
                 }
-            }
+            ]
         });
 
         res.status(200).json(menus);
@@ -170,14 +176,20 @@ exports.getMenusByStatus = async (req, res) => {
 
         const menus = await Menu.findAll({
             where: { status: status },
-            include: {
-                model: MenuCategory,
-                as: 'menuCategories',
-                include: {
-                    model: MenuItem,
-                    as: 'menuItems'
+            include: [
+                {
+                    model: MenuCategory,
+                    as: 'menuCategories',
+                    include: {
+                        model: MenuItem,
+                        as: 'menuItems'
+                    }
+                },
+                {
+                    model: Restaurant,
+                    as: 'restaurant' // Include restaurant data
                 }
-            }
+            ]
         });
 
         res.status(200).json(menus);
@@ -193,14 +205,20 @@ exports.getMenuById = async (req, res) => {
         const { id } = req.params;
 
         const menu = await Menu.findByPk(id, {
-            include: {
-                model: MenuCategory,
-                as: 'menuCategories',
-                include: {
-                    model: MenuItem,
-                    as: 'menuItems'
+            include: [
+                {
+                    model: MenuCategory,
+                    as: 'menuCategories',
+                    include: {
+                        model: MenuItem,
+                        as: 'menuItems'
+                    }
+                },
+                {
+                    model: Restaurant,
+                    as: 'restaurant' // Include restaurant data
                 }
-            }
+            ]
         });
 
         if (!menu) {
@@ -219,7 +237,6 @@ exports.getAllMenusWithPagination = async (req, res) => {
     try {
         const { page = 1, limit = 10 } = req.query; // Default to page 1 and limit 10
 
-        // Ensure page and limit are integers
         const pageNumber = parseInt(page, 10);
         const limitNumber = parseInt(limit, 10);
 
@@ -231,28 +248,30 @@ exports.getAllMenusWithPagination = async (req, res) => {
             return res.status(400).json({ message: 'Invalid limit. Limit must be a positive integer.' });
         }
 
-        // Calculate offset
         const offset = (pageNumber - 1) * limitNumber;
 
-        // Fetch menus with pagination
         const { count: totalMenus, rows: menus } = await Menu.findAndCountAll({
             limit: limitNumber,
             offset: offset,
-            include: {
-                model: MenuCategory,
-                as: 'menuCategories',
-                include: {
-                    model: MenuItem,
-                    as: 'menuItems'
+            include: [
+                {
+                    model: MenuCategory,
+                    as: 'menuCategories',
+                    include: {
+                        model: MenuItem,
+                        as: 'menuItems'
+                    }
+                },
+                {
+                    model: Restaurant,
+                    as: 'restaurant' // Include restaurant data
                 }
-            },
+            ],
             distinct: true // Ensure distinct count of menus
         });
 
-        // Calculate total pages
         const totalPages = Math.ceil(totalMenus / limitNumber);
 
-        // Return paginated response
         res.status(200).json({
             totalMenus,
             totalPages,
