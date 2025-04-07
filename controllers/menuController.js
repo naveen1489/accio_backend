@@ -49,7 +49,7 @@ exports.createMenu = async (req, res) => {
             ReceiverId: '988b76f8-66e6-4d5c-ab5b-01257395c1c6', // Replace with the actual admin ID
             SenderId: restaurantId, // The restaurant ID is the sender
             NotificationMessage: `A new menu "${menuName}" has been created by restaurant "${restaurant.name}".`,
-            NotificationType: 'menu_creation',
+            NotificationType: 'Menu Creation',
             NotificationMetadata: { menuId: menu.id }
         });
 

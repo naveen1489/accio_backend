@@ -1,61 +1,38 @@
 'use strict';
+const jwt = require('jsonwebtoken');
+const { Notification } = require('../models');
 
-const NotificationService = require('../services/notificationService');
-
-class NotificationController {
-    /**
-     * Create a new notification
-     */
-    static async createNotification(req, res) {
-        try {
-            const { ReceiverId, SenderId, NotificationMessage, NotificationType, NotificationMetadata } = req.body;
-
-            const notification = await NotificationService.createNotification({
-                ReceiverId,
-                SenderId,
-                NotificationMessage,
-                NotificationType,
-                NotificationMetadata,
-            });
-
-            res.status(201).json({ message: 'Notification created successfully', notification });
-        } catch (error) {
-            console.error('Error creating notification:', error);
-            res.status(500).json({ message: 'Internal server error', error: error.message });
+exports.getNotificationsByReceiver = async (req, res) => {
+    console.log('Fetching notifications for receiver:', req.params.receiverId); // Debugging line
+    try {
+        const authHeader = req.headers.authorization;
+        if (!authHeader) {
+        return res.status(401).json({ message: 'Authorization token missing' });
         }
-    }
-
-    /**
-     * Mark a notification as read
-     */
-    static async markAsRead(req, res) {
+        const token = authHeader.split(' ')[1];
+        let decoded;
         try {
-            const { id } = req.params;
-
-            const notification = await NotificationService.markAsRead(id);
-
-            res.status(200).json({ message: 'Notification marked as read', notification });
-        } catch (error) {
-            console.error('Error marking notification as read:', error);
-            res.status(500).json({ message: 'Internal server error', error: error.message });
+            decoded = jwt.verify(token, process.env.JWT_SECRET);
+        } catch (err) {
+            return res.status(401).json({ message: 'Invalid or expired token' });
         }
-    }
+        decoded = jwt.verify(token, process.env.JWT_SECRET);
+        
 
-    /**
-     * Get all notifications for a specific receiver
-     */
-    static async getNotificationsByReceiver(req, res) {
-        try {
-            const { receiverId } = req.params;
-
-            const notifications = await NotificationService.getNotificationsByReceiver(receiverId);
-
-            res.status(200).json({ notifications });
-        } catch (error) {
-            console.error('Error fetching notifications:', error);
-            res.status(500).json({ message: 'Internal server error', error: error.message });
+        const receiverId = decoded.id;
+        //const { receiverId } = req.params;
+        console.log('Receiver ID:', receiverId); // Debugging line
+        if (!receiverId) {
+            return res.status(400).json({ message: 'Receiver ID is required' });
         }
+        const notifications = await Notification.findAll({
+            where: { ReceiverId: receiverId },
+            order: [['createdAt', 'DESC']], // Sort by most recent
+        });
+        res.status(200).json(notifications);
+        //return notifications;
+    } catch (error) {
+        console.error('Error fetching notifications:', error);
+        throw new Error('Failed to fetch notifications');
     }
-}
-
-module.exports = NotificationController;
+};
