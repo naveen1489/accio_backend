@@ -29,7 +29,11 @@ exports.getNotificationsByReceiver = async (req, res) => {
             where: { ReceiverId: receiverId },
             order: [['createdAt', 'DESC']], // Sort by most recent
         });
-        res.status(200).json(notifications);
+        const notificationsCount = await Notification.findAll({
+            where: { ReceiverId: receiverId, Status: 'unread' },
+            order: [['createdAt', 'DESC']], // Sort by most recent
+        });
+        res.status(200).json({notifications, notificationsCount});
         //return notifications;
     } catch (error) {
         console.error('Error fetching notifications:', error);
