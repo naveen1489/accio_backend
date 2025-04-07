@@ -89,38 +89,67 @@ const getAllStatistics = async (req, res) => {
         // Get total subscribers
         const totalSubscribers = await Subscription.count();
 
-        // Get day-wise new subscribers for this month
-        const startOfMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
-        const endOfMonth = new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0);
+        // Get the last 10 days
+        const today = new Date();
+        const last10Days = Array.from({ length: 10 }, (_, i) => {
+            const date = new Date();
+            date.setDate(today.getDate() - i);
+            return date.toISOString().split('T')[0]; // Format as YYYY-MM-DD
+        }).reverse(); // Reverse to get ascending order
 
-        const dayWiseSubscribers = await Subscription.findAll({
+        // Get day-wise new subscribers for the last 10 days
+        const dayWiseSubscribersRaw = await Subscription.findAll({
             attributes: [
                 [sequelize.fn('DATE', sequelize.col('createdAt')), 'date'],
                 [sequelize.fn('COUNT', sequelize.col('id')), 'count']
             ],
             where: {
                 createdAt: {
-                    [Op.between]: [startOfMonth, endOfMonth]
+                    [Op.between]: [last10Days[0], last10Days[last10Days.length - 1]]
                 }
             },
             group: [sequelize.fn('DATE', sequelize.col('createdAt'))],
             order: [[sequelize.fn('DATE', sequelize.col('createdAt')), 'ASC']]
         });
 
-        // Get day-wise new restaurant partners for this month
-        const dayWisePartners = await Restaurant.findAll({
+        // Map raw data to a dictionary for easy lookup
+        const dayWiseSubscribersMap = dayWiseSubscribersRaw.reduce((acc, record) => {
+            acc[record.dataValues.date] = parseInt(record.dataValues.count, 10);
+            return acc;
+        }, {});
+
+        // Fill missing days with 0
+        const dayWiseSubscribers = last10Days.map((date) => ({
+            date,
+            count: dayWiseSubscribersMap[date] || 0
+        }));
+
+        // Get day-wise new restaurant partners for the last 10 days
+        const dayWisePartnersRaw = await Restaurant.findAll({
             attributes: [
                 [sequelize.fn('DATE', sequelize.col('createdAt')), 'date'],
                 [sequelize.fn('COUNT', sequelize.col('id')), 'count']
             ],
             where: {
                 createdAt: {
-                    [Op.between]: [startOfMonth, endOfMonth]
+                    [Op.between]: [last10Days[0], last10Days[last10Days.length - 1]]
                 }
             },
             group: [sequelize.fn('DATE', sequelize.col('createdAt'))],
             order: [[sequelize.fn('DATE', sequelize.col('createdAt')), 'ASC']]
         });
+
+        // Map raw data to a dictionary for easy lookup
+        const dayWisePartnersMap = dayWisePartnersRaw.reduce((acc, record) => {
+            acc[record.dataValues.date] = parseInt(record.dataValues.count, 10);
+            return acc;
+        }, {});
+
+        // Fill missing days with 0
+        const dayWisePartners = last10Days.map((date) => ({
+            date,
+            count: dayWisePartnersMap[date] || 0
+        }));
 
         // Combine all statistics into a single JSON response
         res.status(200).json({
