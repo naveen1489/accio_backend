@@ -36,3 +36,20 @@ exports.getNotificationsByReceiver = async (req, res) => {
         throw new Error('Failed to fetch notifications');
     }
 };
+
+exports.markAsRead= async (req, res) => {
+    try {
+        console.log(req.params); // Debugging line
+        const notificationId = req.params.id;
+        const notification = await Notification.findByPk(notificationId);
+        if (!notification) {
+            throw new Error('Notification not found');
+        }
+        notification.Status = 'read';
+        await notification.save();
+        res.status(200).json(true);
+    } catch (error) {
+        console.error('Error marking notification as read:', error);
+        throw new Error('Failed to mark notification as read');
+    }
+}

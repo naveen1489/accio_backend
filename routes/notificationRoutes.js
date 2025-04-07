@@ -9,7 +9,7 @@ const authenticateToken = require('../middlewares/authMiddleware'); // Assuming 
 //router.post('/', authenticateToken, NotificationController.createNotification);
 
 // Mark a notification as read
-//router.put('/:id/read', authenticateToken, NotificationController.markAsRead);
+router.put('/:id/read', authenticateToken, NotificationController.markAsRead);
 
 // Get all notifications for a specific receiver
 router.get('/receiver', authenticateToken, NotificationController.getNotificationsByReceiver);
