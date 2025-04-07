@@ -17,4 +17,7 @@ router.get('/day-wise-new-subscribers', authenticateToken, StatisticController.g
 // Get day-wise new restaurant partners for this month
 router.get('/day-wise-new-partners', authenticateToken, StatisticController.getDayWiseNewPartners);
 
+// Get all statistics in a single response
+router.get('/all-statistics', authenticateToken, StatisticController.getAllStatistics);
+
 module.exports = router;
