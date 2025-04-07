@@ -89,54 +89,30 @@ const getAllStatistics = async (req, res) => {
         // Get total subscribers
         const totalSubscribers = await Subscription.count();
 
-        // Get the last 10 days
+        // Get the last 10 days, including today, in local time
         const today = new Date();
         const last10Days = Array.from({ length: 10 }, (_, i) => {
-            const date = new Date();
-            date.setDate(today.getDate() - i);
-            return date.toISOString().split('T')[0]; // Format as YYYY-MM-DD
-        }).reverse(); // Reverse to get ascending order
-
-        // Get day-wise new subscribers for the last 10 days
-        const dayWiseSubscribersRaw = await Subscription.findAll({
-            attributes: [
-                [sequelize.fn('DATE', sequelize.col('createdAt')), 'date'],
-                [sequelize.fn('COUNT', sequelize.col('id')), 'count']
-            ],
-            where: {
-                createdAt: {
-                    [Op.between]: [last10Days[0], last10Days[last10Days.length - 1]]
-                }
-            },
-            group: [sequelize.fn('DATE', sequelize.col('createdAt'))],
-            order: [[sequelize.fn('DATE', sequelize.col('createdAt')), 'ASC']]
+            const date = new Date(today); // Clone the current date
+            date.setDate(today.getDate() - (9 - i)); // Adjust to include today as the last day
+            return date.toLocaleDateString('en-CA'); // Format as YYYY-MM-DD in local time
         });
-
-        // Map raw data to a dictionary for easy lookup
-        const dayWiseSubscribersMap = dayWiseSubscribersRaw.reduce((acc, record) => {
-            acc[record.dataValues.date] = parseInt(record.dataValues.count, 10);
-            return acc;
-        }, {});
-
-        // Fill missing days with 0
-        const dayWiseSubscribers = last10Days.map((date) => ({
-            date,
-            count: dayWiseSubscribersMap[date] || 0
-        }));
 
         // Get day-wise new restaurant partners for the last 10 days
         const dayWisePartnersRaw = await Restaurant.findAll({
             attributes: [
-                [sequelize.fn('DATE', sequelize.col('createdAt')), 'date'],
+                [sequelize.literal(`DATE("createdAt" AT TIME ZONE 'Asia/Kolkata')`), 'date'], // Adjust for time zone
                 [sequelize.fn('COUNT', sequelize.col('id')), 'count']
             ],
             where: {
                 createdAt: {
-                    [Op.between]: [last10Days[0], last10Days[last10Days.length - 1]]
+                    [Op.between]: [
+                        `${last10Days[0]} 00:00:00+05:30`,
+                        `${last10Days[last10Days.length - 1]} 23:59:59+05:30`
+                    ]
                 }
             },
-            group: [sequelize.fn('DATE', sequelize.col('createdAt'))],
-            order: [[sequelize.fn('DATE', sequelize.col('createdAt')), 'ASC']]
+            group: [sequelize.literal(`DATE("createdAt" AT TIME ZONE 'Asia/Kolkata')`)],
+            order: [[sequelize.literal(`DATE("createdAt" AT TIME ZONE 'Asia/Kolkata')`), 'ASC']]
         });
 
         // Map raw data to a dictionary for easy lookup
@@ -155,7 +131,6 @@ const getAllStatistics = async (req, res) => {
         res.status(200).json({
             totalPartners,
             totalSubscribers,
-            dayWiseSubscribers,
             dayWisePartners,
             totalRevenue: 0 // Hardcoded total revenue
         });
@@ -164,7 +139,6 @@ const getAllStatistics = async (req, res) => {
         res.status(500).json({ message: 'Internal server error', error: error.message });
     }
 };
-
 module.exports = {
     getTotalRestaurantPartners,
     getTotalSubscribers,
