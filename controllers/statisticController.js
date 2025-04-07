@@ -80,6 +80,7 @@ const getDayWiseNewPartners = async (req, res) => {
 };
 
 // Get all statistics data
+// Get all statistics data
 const getAllStatistics = async (req, res) => {
     try {
         // Get total restaurant partners
@@ -126,7 +127,8 @@ const getAllStatistics = async (req, res) => {
             totalPartners,
             totalSubscribers,
             dayWiseSubscribers,
-            dayWisePartners
+            dayWisePartners,
+            totalRevenue: 0 // Hardcoded total revenue
         });
     } catch (error) {
         console.error('Error fetching statistics:', error);
