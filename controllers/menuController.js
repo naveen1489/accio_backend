@@ -43,16 +43,22 @@ exports.createMenu = async (req, res) => {
                 }
             }
         }
-
-        // Create a notification for the admin
-        await Notification.create({
-            ReceiverId: '988b76f8-66e6-4d5c-ab5b-01257395c1c6', // Replace with the actual admin ID
-            SenderId: restaurantId, // The restaurant ID is the sender
-            NotificationMessage: `A new menu "${menuName}" has been created by restaurant "${restaurant.name}".`,
-            NotificationType: 'Menu Creation',
-            NotificationMetadata: { menuId: menu.id }
+        const user = await User.findOne({
+            where: { role: 'admin' },
+            attributes: ['id'], // Only get the 'id' field
+            order: [['createdAt', 'DESC']], // optional: most recent
+            limit: 1 
         });
-
+        // Create a notification for the admin
+        if(user){
+            await Notification.create({
+                ReceiverId: user.id, // Replace with the actual admin ID
+                SenderId: restaurantId, // The restaurant ID is the sender
+                NotificationMessage: `A new menu "${menuName}" has been created by restaurant "${restaurant.name}".`,
+                NotificationType: 'Menu Creation',
+                NotificationMetadata: { menuId: menu.id }
+            });
+        }
         res.status(201).json({ message: 'Menu created successfully', menu });
     } catch (error) {
         console.error('Error creating menu:', error);
