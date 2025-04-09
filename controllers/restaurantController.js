@@ -222,7 +222,8 @@ exports.updateRestaurant = async (req, res) => {
             postalCode,
             country,
             latitude,
-            longitude
+            longitude,
+            imageUrl 
         } = req.body;
 
         const restaurant = await Restaurant.findByPk(id);
@@ -244,10 +245,14 @@ exports.updateRestaurant = async (req, res) => {
         restaurant.country = country || restaurant.country;
         restaurant.latitude = latitude || restaurant.latitude;
         restaurant.longitude = longitude || restaurant.longitude;
+        restaurant.imageUrl = imageUrl || restaurant.imageUrl; 
 
         await restaurant.save();
 
-        res.status(200).json({ message: 'Restaurant updated successfully', restaurant });
+        // Fetch the updated restaurant object
+        const updatedRestaurant = await Restaurant.findByPk(id);
+
+        res.status(200).json({ message: 'Restaurant updated successfully', restaurant: updatedRestaurant });
     } catch (error) {
         console.error('Error updating restaurant:', error);
         res.status(500).json({ message: 'Internal server error', error });
