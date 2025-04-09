@@ -1,12 +1,13 @@
 'use strict';
 
-const { Restaurant } = require('../models');
+const { Restaurant, sequelize } = require('../models');
 const transporter = require('../services/emailService');
 const { User } = require('../models'); // Import the User model
 const crypto = require('crypto'); // For generating random password
 const bcrypt = require('bcryptjs'); // Import bcrypt for password hashing
 
 exports.addRestaurantPartner = async (req, res) => {
+    const transaction = await sequelize.transaction(); // Start a transaction
     try {
         const {
             companyName,
@@ -23,12 +24,16 @@ exports.addRestaurantPartner = async (req, res) => {
             postalCode,
             country,
             latitude,
-            longitude
+            longitude,
+            imageUrl,
         } = req.body;
 
         // Check if the restaurant already exists
         const existingRestaurant = await Restaurant.findOne({ where: { emailId } });
-        if (existingRestaurant) return res.status(400).json({ message: 'Restaurant already exists' });
+        if (existingRestaurant) {
+            await transaction.rollback(); 
+            return res.status(400).json({ message: 'Restaurant already exists' });
+        }
 
         // Create the restaurant
         const restaurant = await Restaurant.create({
@@ -46,8 +51,9 @@ exports.addRestaurantPartner = async (req, res) => {
             postalCode,
             country,
             latitude,
-            longitude
-        });
+            longitude,
+            imageUrl,
+        }, { transaction }); // Pass transaction
 
         // Generate a random 8-character password
         const randomPassword = crypto.randomBytes(4).toString('hex'); // Generates an 8-character password
@@ -61,7 +67,10 @@ exports.addRestaurantPartner = async (req, res) => {
             password: hashedPassword, // Store the hashed password
             role: 'restaurant', // Assign the role as 'restaurant'
             email: emailId
-        });
+        }, { transaction }); // Pass transaction
+
+        // Commit the transaction
+        await transaction.commit();
 
         // Prepare email options
         const mailOptions = {
@@ -80,8 +89,13 @@ exports.addRestaurantPartner = async (req, res) => {
         }
         console.log('Email process completed.');
 
-        res.status(200).json({ message: 'Restaurant partner added successfully', restaurant, user });
+        res.status(200).json({ 
+            message: 'Restaurant partner added successfully', 
+            restaurant,
+            user 
+        });
     } catch (error) {
+        await transaction.rollback(); // Rollback transaction on error
         console.error('Error adding restaurant partner:', error);
         res.status(500).json({ message: 'Internal server error', error });
     }

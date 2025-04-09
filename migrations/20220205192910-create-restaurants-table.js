@@ -72,6 +72,10 @@ module.exports = {
         type: Sequelize.FLOAT,
         allowNull: false
       },
+      imageUrl: {
+        type: Sequelize.TEXT, 
+        allowNull: false 
+      },
       createdAt: {
         type: Sequelize.DATE,
         allowNull: false,

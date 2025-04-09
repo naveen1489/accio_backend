@@ -77,6 +77,10 @@ module.exports = (sequelize, DataTypes) => {
         longitude: {
             type: DataTypes.FLOAT,
             allowNull: false
+        },
+        imageUrl: {
+            type: DataTypes.TEXT, 
+            allowNull: false,
         }
     }, {
         sequelize,
