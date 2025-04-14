@@ -1,6 +1,6 @@
 'use strict';
 
-const { Menu, MenuCategory, MenuItem, Restaurant, Notification, MenuReview  } = require('../models');
+const { Menu, MenuCategory, MenuItem, Restaurant, Notification, MenuReview,User  } = require('../models');
 
 //const NotificationService = require('../services/notificationService');
 
