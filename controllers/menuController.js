@@ -7,7 +7,14 @@ const { Menu, MenuCategory, MenuItem, Restaurant, Notification, MenuReview,User 
 // Create a new menu
 exports.createMenu = async (req, res) => {
     try {
-        const { menuName, vegNonVeg, restaurantId, menuCategories ,price} = req.body;
+        const {
+            menuName,
+            vegNonVeg,
+            restaurantId,
+            menuCategories,
+            price,
+            discount // Discount JSON object
+        } = req.body;
 
         // Check if the restaurant exists
         const restaurant = await Restaurant.findByPk(restaurantId);
@@ -43,14 +50,36 @@ exports.createMenu = async (req, res) => {
                 }
             }
         }
+
+        // Add discount if provided
+        if (discount && discount.discountEnabled) {
+            const {
+                discountEnabled,
+                discountType,
+                discountValue,
+                discountStartDate,
+                discountEndDate
+            } = discount;
+
+            await Discount.create({
+                menuId: menu.id,
+                discountEnabled,
+                discountType,
+                discountValue,
+                discountStartDate,
+                discountEndDate
+            });
+        }
+
+        // Create a notification for the admin
         const user = await User.findOne({
             where: { role: 'admin' },
             attributes: ['id'], // Only get the 'id' field
             order: [['createdAt', 'DESC']], // optional: most recent
-            limit: 1 
+            limit: 1
         });
-        // Create a notification for the admin
-        if(user){
+
+        if (user) {
             await Notification.create({
                 ReceiverId: user.id, // Replace with the actual admin ID
                 SenderId: restaurantId, // The restaurant ID is the sender
@@ -59,6 +88,7 @@ exports.createMenu = async (req, res) => {
                 NotificationMetadata: { menuId: menu.id }
             });
         }
+
         res.status(201).json({ message: 'Menu created successfully', menu });
     } catch (error) {
         console.error('Error creating menu:', error);

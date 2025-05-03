@@ -10,7 +10,8 @@ module.exports = (sequelize, DataTypes) => {
 
             // A Menu has many MenuCategories
             Menu.hasMany(models.MenuCategory, { foreignKey: 'menuId', as: 'menuCategories' });
-        }
+        
+            Menu.hasOne(models.Discount, { foreignKey: 'menuId', as: 'discount' });}
     }
 
     Menu.init({
