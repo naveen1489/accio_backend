@@ -15,4 +15,13 @@ router.post('/login-restaurant', userController.loginRestaurant);
 // Login route for Delivery Partners
 router.post('/login-delivery', userController.loginDeliveryPartner);
 
+// Send OTP
+router.post('/restaurant/send-otp', userController.sendOtp);
+
+// Verify OTP
+router.post('/restaurant/verify-otp', userController.verifyOtp);
+
+// Reset Password
+router.post('/restaurant/reset-password', userController.resetPassword);
+
 module.exports = router;

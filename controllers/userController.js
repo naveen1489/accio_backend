@@ -2,7 +2,7 @@
 
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-const { User } = require('../models');
+const { User, OTP } = require('../models');
 
 // Register Admin
 exports.registerAdmin = async (req, res) => {
@@ -159,6 +159,108 @@ exports.loginRestaurant = async (req, res) => {
       res.status(200).json({ message: 'Delivery partner login successful', token });
     } catch (error) {
       console.error('Error during delivery partner login:', error);
+      res.status(500).json({ message: 'Internal server error', error });
+    }
+  };
+
+  exports.sendOtp = async (req, res) => {
+    try {
+      const { username } = req.body;
+  
+      // Generate a 6-digit random OTP
+      const otp = Math.floor(100000 + Math.random() * 900000).toString();
+  
+      // Set expiration time (90 seconds from now)
+      const expiresAt = new Date(Date.now() + 90 * 1000);
+  
+      // Save the OTP in the database
+      await OTP.create({ username, otp, expiresAt });
+  
+      // Generate a JWT token with OTP pending verification
+      const token = jwt.sign(
+        { username, otpVerified: false },
+        process.env.JWT_SECRET,
+        { expiresIn: '10m' } // Token expires in 10 minutes
+      );
+  
+      // Send OTP via SMS (replace with actual SMS sending logic)
+      console.log(`Sending OTP ${otp} to user ${username}`);
+  
+      res.status(200).json({ message: 'OTP sent successfully', token });
+    } catch (error) {
+      console.error('Error sending OTP:', error);
+      res.status(500).json({ message: 'Internal server error', error });
+    }
+  };
+
+  exports.verifyOtp = async (req, res) => {
+    try {
+      const { username, otp } = req.body;
+      const token = req.headers.authorization?.split(' ')[1];
+  
+      // Validate the JWT token
+      const decoded = jwt.verify(token, process.env.JWT_SECRET);
+      if (decoded.username !== username || decoded.otpVerified) {
+        return res.status(400).json({ message: 'Invalid or already verified token' });
+      }
+  
+      // Find the OTP record for the given username
+      const otpRecord = await OTP.findOne({ where: { username, otp } });
+      if (!otpRecord) {
+        return res.status(400).json({ message: 'Invalid OTP' });
+      }
+  
+      // Check if the OTP is expired
+      if (new Date() > otpRecord.expiresAt) {
+        return res.status(400).json({ message: 'OTP has expired' });
+      }
+  
+      // OTP is valid, delete it from the database
+      await otpRecord.destroy();
+  
+      // Generate a new JWT token with OTP verified
+      const newToken = jwt.sign(
+        { username, otpVerified: true },
+        process.env.JWT_SECRET,
+        { expiresIn: '10m' } // Token expires in 10 minutes
+      );
+  
+      res.status(200).json({ message: 'OTP verified successfully', token: newToken });
+    } catch (error) {
+      console.error('Error verifying OTP:', error);
+      res.status(500).json({ message: 'Internal server error', error });
+    }
+  };
+
+  exports.resetPassword = async (req, res) => {
+    try {
+      const { username, newPassword, confirmPassword } = req.body;
+      const token = req.headers.authorization?.split(' ')[1];
+  
+      // Validate the JWT token
+      const decoded = jwt.verify(token, process.env.JWT_SECRET);
+      if (decoded.username !== username || !decoded.otpVerified) {
+        return res.status(400).json({ message: 'Invalid or unverified token' });
+      }
+  
+      // Validate new and confirm password
+      if (newPassword !== confirmPassword) {
+        return res.status(400).json({ message: 'Passwords do not match' });
+      }
+  
+      // Find the user by username
+      const user = await User.findOne({ where: { username, role: 'restaurant' } });
+      if (!user) {
+        return res.status(404).json({ message: 'User not found' });
+      }
+  
+      // Hash the new password and update it
+      user.password = await bcrypt.hash(newPassword, 10);
+      await user.save();
+  
+      res.status(200).json({ message: 'Password reset successfully' });
+    } catch (error) {
+      console.error('Error resetting password:', error);
       res.status(500).json({ message: 'Internal server error', error });
     }
   };
