@@ -275,3 +275,113 @@ exports.deleteRestaurant = async (req, res) => {
         res.status(500).json({ message: 'Internal server error', error });
     }
 };
+
+exports.createDeliveryPartner = async (req, res) => {
+  try {
+    const { name, phone, email, status, workingHoursStart, workingHoursEnd, restaurantId } = req.body;
+
+    // Check if the restaurant exists
+    const restaurant = await Restaurant.findByPk(restaurantId);
+    if (!restaurant) {
+      return res.status(404).json({ message: 'Restaurant not found' });
+    }
+
+    // Create the delivery partner
+    const deliveryPartner = await DeliveryPartner.create({
+      name,
+      phone,
+      email,
+      status,
+      workingHoursStart,
+      workingHoursEnd,
+      restaurantId,
+    });
+
+    res.status(201).json({ message: 'Delivery partner created successfully', deliveryPartner });
+  } catch (error) {
+    console.error('Error creating delivery partner:', error);
+    res.status(500).json({ message: 'Internal server error', error });
+  }
+};
+
+exports.updateDeliveryPartner = async (req, res) => {
+  try {
+    const { id } = req.params; // Delivery Partner ID
+    const { name, phone, email, status, workingHoursStart, workingHoursEnd } = req.body;
+
+    // Find the delivery partner by ID
+    const deliveryPartner = await DeliveryPartner.findByPk(id);
+    if (!deliveryPartner) {
+      return res.status(404).json({ message: 'Delivery partner not found' });
+    }
+
+    // Update fields if provided
+    deliveryPartner.name = name || deliveryPartner.name;
+    deliveryPartner.phone = phone || deliveryPartner.phone;
+    deliveryPartner.email = email || deliveryPartner.email;
+    deliveryPartner.status = status || deliveryPartner.status;
+    deliveryPartner.workingHoursStart = workingHoursStart || deliveryPartner.workingHoursStart;
+    deliveryPartner.workingHoursEnd = workingHoursEnd || deliveryPartner.workingHoursEnd;
+
+    // Save the updated delivery partner
+    await deliveryPartner.save();
+
+    res.status(200).json({ message: 'Delivery partner updated successfully', deliveryPartner });
+  } catch (error) {
+    console.error('Error updating delivery partner:', error);
+    res.status(500).json({ message: 'Internal server error', error });
+  }
+};
+
+exports.deleteDeliveryPartner = async (req, res) => {
+  try {
+    const { id } = req.params; // Delivery Partner ID
+
+    // Find the delivery partner by ID
+    const deliveryPartner = await DeliveryPartner.findByPk(id);
+    if (!deliveryPartner) {
+      return res.status(404).json({ message: 'Delivery partner not found' });
+    }
+
+    // Delete the delivery partner
+    await deliveryPartner.destroy();
+
+    res.status(200).json({ message: 'Delivery partner deleted successfully' });
+  } catch (error) {
+    console.error('Error deleting delivery partner:', error);
+    res.status(500).json({ message: 'Internal server error', error });
+  }
+};
+
+exports.getDeliveryPartnersByRestaurantId = async (req, res) => {
+  try {
+    const { restaurantId } = req.params; // Restaurant ID
+
+    // Find all delivery partners for the given restaurant ID
+    const deliveryPartners = await DeliveryPartner.findAll({
+      where: { restaurantId },
+    });
+
+    res.status(200).json({ deliveryPartners });
+  } catch (error) {
+    console.error('Error fetching delivery partners:', error);
+    res.status(500).json({ message: 'Internal server error', error });
+  }
+};
+
+exports.getDeliveryPartnerById = async (req, res) => {
+  try {
+    const { id } = req.params; // Delivery Partner ID
+
+    // Find the delivery partner by ID
+    const deliveryPartner = await DeliveryPartner.findByPk(id);
+    if (!deliveryPartner) {
+      return res.status(404).json({ message: 'Delivery partner not found' });
+    }
+
+    res.status(200).json({ deliveryPartner });
+  } catch (error) {
+    console.error('Error fetching delivery partner:', error);
+    res.status(500).json({ message: 'Internal server error', error });
+  }
+};

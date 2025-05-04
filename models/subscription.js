@@ -8,6 +8,8 @@ module.exports = (sequelize, DataTypes) => {
       Subscription.belongsTo(models.User, { foreignKey: 'userId', as: 'customer' });
       // A Subscription belongs to a Restaurant (the partner providing the meals)
       Subscription.belongsTo(models.Restaurant, { foreignKey: 'restaurantId', as: 'restaurant' });
+      // A Subscription belongs to a Menu
+      Subscription.belongsTo(models.Menu, { foreignKey: 'menuId', as: 'menu' });
     }
   }
 
@@ -25,9 +27,21 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.UUID,
       allowNull: false,
     },
-    mealPlanType: {
-      type: DataTypes.ENUM('breakfast', 'lunch', 'dinner'),
-      allowNull: false,
+    menuId: {
+      type: DataTypes.UUID,
+      allowNull: false, // Link to the Menu table
+    },
+    categoryName: {
+      type: DataTypes.STRING,
+      allowNull: false, // E.g., "Vegetarian", "Non-Vegetarian", etc.
+    },
+    mealPlan: {
+      type: DataTypes.ENUM('weekly', 'monthly'),
+      allowNull: false, // E.g., "weekly" or "monthly"
+    },
+    mealFrequency: {
+      type: DataTypes.ENUM('daily', 'alternate', 'custom'),
+      allowNull: false, // E.g., "daily", "alternate days", or "custom"
     },
     startDate: {
       type: DataTypes.DATE,
@@ -41,7 +55,6 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.ENUM('active', 'paused', 'cancelled'),
       defaultValue: 'active',
     },
-    // Additional fields (e.g., delivery details) can be added here if needed.
   }, {
     sequelize,
     modelName: 'Subscription',

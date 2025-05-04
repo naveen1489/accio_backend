@@ -12,8 +12,11 @@ router.get('/profile', authenticateToken, userController.getProfile);
 // Login route for Restaurant Partners
 router.post('/login-restaurant', userController.loginRestaurant);
 
-// Login route for Delivery Partners
+
+// Login delivery partner via OTP
 router.post('/login-delivery', userController.loginDeliveryPartner);
+
+
 
 // Send OTP
 router.post('/restaurant/send-otp', userController.sendOtp);

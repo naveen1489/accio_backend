@@ -2,27 +2,42 @@
 
 const { Subscription } = require('../models/subscription');
 
-/**
- * Create a new Subscription.
- * Expects JSON body with: restaurantId, mealPlanType, startDate, endDate.
- * The authenticated user's ID is used as the customer.
- */
 exports.createSubscription = async (req, res) => {
   try {
-    const { restaurantId, mealPlanType, startDate, endDate } = req.body;
-    const userId = req.user.id; // Authenticated user
+    const {
+      userId,
+      restaurantId,
+      menuId,
+      categoryName,
+      mealPlan,
+      mealFrequency,
+      startDate,
+      endDate,
+    } = req.body;
 
-    if (!restaurantId || !mealPlanType || !startDate || !endDate) {
-      return res.status(400).json({ message: 'Missing required fields' });
+    // Check if the restaurant exists
+    const restaurant = await Restaurant.findByPk(restaurantId);
+    if (!restaurant) {
+      return res.status(404).json({ message: 'Restaurant not found' });
     }
 
+    // Check if the menu exists
+    const menu = await Menu.findByPk(menuId);
+    if (!menu) {
+      return res.status(404).json({ message: 'Menu not found' });
+    }
+
+    // Create the subscription
     const subscription = await Subscription.create({
       userId,
       restaurantId,
-      mealPlanType,
+      menuId,
+      categoryName,
+      mealPlan,
+      mealFrequency,
       startDate,
       endDate,
-      status: 'active'
+      status: 'pending', // Default status
     });
 
     res.status(201).json({ message: 'Subscription created successfully', subscription });
@@ -31,118 +46,123 @@ exports.createSubscription = async (req, res) => {
     res.status(500).json({ message: 'Internal server error', error });
   }
 };
-
-/**
- * Update an existing Subscription.
- * Expects subscription ID in params and fields to update in the body.
- */
 exports.updateSubscription = async (req, res) => {
   try {
     const { id } = req.params;
-    const { mealPlanType, startDate, endDate } = req.body;
+    const {
+      menuId,
+      categoryName,
+      mealPlan,
+      mealFrequency,
+      startDate,
+      endDate,
+      status,
+    } = req.body;
 
+    // Find the subscription by ID
     const subscription = await Subscription.findByPk(id);
     if (!subscription) {
       return res.status(404).json({ message: 'Subscription not found' });
     }
-    if (subscription.userId !== req.user.id) {
-      return res.status(403).json({ message: 'Not authorized to update this subscription' });
-    }
 
-    if (mealPlanType) subscription.mealPlanType = mealPlanType;
-    if (startDate) subscription.startDate = startDate;
-    if (endDate) subscription.endDate = endDate;
+    // Update fields if provided
+    subscription.menuId = menuId || subscription.menuId;
+    subscription.categoryName = categoryName || subscription.categoryName;
+    subscription.mealPlan = mealPlan || subscription.mealPlan;
+    subscription.mealFrequency = mealFrequency || subscription.mealFrequency;
+    subscription.startDate = startDate || subscription.startDate;
+    subscription.endDate = endDate || subscription.endDate;
+    subscription.status = status || subscription.status;
 
+    // Save the updated subscription
     await subscription.save();
+
     res.status(200).json({ message: 'Subscription updated successfully', subscription });
   } catch (error) {
     console.error('Error updating subscription:', error);
     res.status(500).json({ message: 'Internal server error', error });
   }
 };
-
-/**
- * Pause a Subscription.
- * Expects subscription ID in params.
- */
-exports.pauseSubscription = async (req, res) => {
+exports.getSubscriptionsByMenuId = async (req, res) => {
   try {
-    const { id } = req.params;
-    const subscription = await Subscription.findByPk(id);
-    if (!subscription) {
-      return res.status(404).json({ message: 'Subscription not found' });
-    }
-    if (subscription.userId !== req.user.id) {
-      return res.status(403).json({ message: 'Not authorized to pause this subscription' });
-    }
+    const { menuId } = req.params;
 
-    subscription.status = 'paused';
-    await subscription.save();
-    res.status(200).json({ message: 'Subscription paused successfully', subscription });
-  } catch (error) {
-    console.error('Error pausing subscription:', error);
-    res.status(500).json({ message: 'Internal server error', error });
-  }
-};
+    // Find subscriptions by menuId
+    const subscriptions = await Subscription.findAll({
+      where: { menuId },
+      include: [
+        { model: User, as: 'customer' },
+        { model: Restaurant, as: 'restaurant' },
+        { model: Menu, as: 'menu' },
+      ],
+    });
 
-/**
- * Resume a Subscription.
- * Expects subscription ID in params.
- */
-exports.resumeSubscription = async (req, res) => {
-  try {
-    const { id } = req.params;
-    const subscription = await Subscription.findByPk(id);
-    if (!subscription) {
-      return res.status(404).json({ message: 'Subscription not found' });
-    }
-    if (subscription.userId !== req.user.id) {
-      return res.status(403).json({ message: 'Not authorized to resume this subscription' });
-    }
-
-    subscription.status = 'active';
-    await subscription.save();
-    res.status(200).json({ message: 'Subscription resumed successfully', subscription });
-  } catch (error) {
-    console.error('Error resuming subscription:', error);
-    res.status(500).json({ message: 'Internal server error', error });
-  }
-};
-
-/**
- * Cancel a Subscription.
- * Expects subscription ID in params.
- */
-exports.cancelSubscription = async (req, res) => {
-  try {
-    const { id } = req.params;
-    const subscription = await Subscription.findByPk(id);
-    if (!subscription) {
-      return res.status(404).json({ message: 'Subscription not found' });
-    }
-    if (subscription.userId !== req.user.id) {
-      return res.status(403).json({ message: 'Not authorized to cancel this subscription' });
-    }
-
-    subscription.status = 'cancelled';
-    await subscription.save();
-    res.status(200).json({ message: 'Subscription cancelled successfully', subscription });
-  } catch (error) {
-    console.error('Error cancelling subscription:', error);
-    res.status(500).json({ message: 'Internal server error', error });
-  }
-};
-
-/**
- * Get all Subscriptions for the authenticated user.
- */
-exports.getSubscriptions = async (req, res) => {
-  try {
-    const userId = req.user.id;
-    const subscriptions = await Subscription.findAll({ where: { userId } });
     res.status(200).json({ subscriptions });
   } catch (error) {
-    console.error('Error fetching subscriptions:', error);
+    console.error('Error fetching subscriptions by menuId:', error);
+    res.status(500).json({ message: 'Internal server error', error });
+  }
+};
+exports.getSubscriptionsByRestaurantId = async (req, res) => {
+  try {
+    const { restaurantId } = req.params;
+
+    // Find subscriptions by restaurantId
+    const subscriptions = await Subscription.findAll({
+      where: { restaurantId },
+      include: [
+        { model: User, as: 'customer' },
+        { model: Restaurant, as: 'restaurant' },
+        { model: Menu, as: 'menu' },
+      ],
+    });
+
+    res.status(200).json({ subscriptions });
+  } catch (error) {
+    console.error('Error fetching subscriptions by restaurantId:', error);
+    res.status(500).json({ message: 'Internal server error', error });
+  }
+};
+exports.getSubscriptionsByUserId = async (req, res) => {
+  try {
+    const { userId } = req.params;
+
+    // Find subscriptions by userId
+    const subscriptions = await Subscription.findAll({
+      where: { userId },
+      include: [
+        { model: User, as: 'customer' },
+        { model: Restaurant, as: 'restaurant' },
+        { model: Menu, as: 'menu' },
+      ],
+    });
+
+    res.status(200).json({ subscriptions });
+  } catch (error) {
+    console.error('Error fetching subscriptions by userId:', error);
+    res.status(500).json({ message: 'Internal server error', error });
+  }
+};
+exports.getSubscriptionById = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // Find subscription by ID
+    const subscription = await Subscription.findByPk(id, {
+      include: [
+        { model: User, as: 'customer' },
+        { model: Restaurant, as: 'restaurant' },
+        { model: Menu, as: 'menu' },
+      ],
+    });
+
+    if (!subscription) {
+      return res.status(404).json({ message: 'Subscription not found' });
+    }
+
+    res.status(200).json({ subscription });
+  } catch (error) {
+    console.error('Error fetching subscription by id:', error);
     res.status(500).json({ message: 'Internal server error', error });
   }
 };

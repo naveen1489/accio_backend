@@ -11,16 +11,16 @@ router.post('/create', authenticateToken, subscriptionController.createSubscript
 // Update an existing subscription
 router.put('/update/:id', authenticateToken, subscriptionController.updateSubscription);
 
-// Pause a subscription
-router.post('/pause/:id', authenticateToken, subscriptionController.pauseSubscription);
+// Get subscriptions by menu ID
+router.get('/menu/:menuId', subscriptionController.getSubscriptionsByMenuId);
 
-// Resume a subscription
-router.post('/resume/:id', authenticateToken, subscriptionController.resumeSubscription);
+// Get subscriptions by restaurant ID
+router.get('/restaurant/:restaurantId', subscriptionController.getSubscriptionsByRestaurantId);
 
-// Cancel a subscription
-router.post('/cancel/:id', authenticateToken, subscriptionController.cancelSubscription);
+// Get subscriptions by user ID
+router.get('/user/:userId', subscriptionController.getSubscriptionsByUserId);
 
-// Get all subscriptions for the authenticated user
-router.get('/', authenticateToken, subscriptionController.getSubscriptions);
+// Get subscription by ID
+router.get('/:id', subscriptionController.getSubscriptionById);
 
 module.exports = router;
