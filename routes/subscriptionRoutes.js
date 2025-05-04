@@ -11,6 +11,11 @@ router.post('/create', authenticateToken, subscriptionController.createSubscript
 // Update an existing subscription
 router.put('/update/:id', authenticateToken, subscriptionController.updateSubscription);
 
+
+
+// Update subscription status
+router.patch('/:id/status', subscriptionController.updateSubscriptionStatus);
+
 // Get subscriptions by menu ID
 router.get('/menu/:menuId', subscriptionController.getSubscriptionsByMenuId);
 

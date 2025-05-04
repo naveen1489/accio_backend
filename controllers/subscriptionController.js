@@ -166,3 +166,32 @@ exports.getSubscriptionById = async (req, res) => {
     res.status(500).json({ message: 'Internal server error', error });
   }
 };
+
+
+exports.updateSubscriptionStatus = async (req, res) => {
+  try {
+    const { id } = req.params; // Subscription ID
+    const { status } = req.body; // New status
+
+    // Validate the status
+    const validStatuses = ['pending', 'rejected', 'approved', 'completed', 'cancelled'];
+    if (!validStatuses.includes(status)) {
+      return res.status(400).json({ message: `Invalid status. Valid statuses are: ${validStatuses.join(', ')}` });
+    }
+
+    // Find the subscription by ID
+    const subscription = await Subscription.findByPk(id);
+    if (!subscription) {
+      return res.status(404).json({ message: 'Subscription not found' });
+    }
+
+    // Update the status
+    subscription.status = status;
+    await subscription.save();
+
+    res.status(200).json({ message: 'Subscription status updated successfully', subscription });
+  } catch (error) {
+    console.error('Error updating subscription status:', error);
+    res.status(500).json({ message: 'Internal server error', error });
+  }
+};
