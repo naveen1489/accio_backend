@@ -1,6 +1,6 @@
 'use strict';
 
-const { Subscription } = require('../models/subscription');
+const { Subscription, Order } = require('../models/subscription');
 
 exports.createSubscription = async (req, res) => {
   try {
@@ -188,6 +188,33 @@ exports.updateSubscriptionStatus = async (req, res) => {
     // Update the status
     subscription.status = status;
     await subscription.save();
+
+    // If the status is approved, generate orders
+    if (status === 'approved') {
+      const { startDate, endDate, mealFrequency, userId, restaurantId, menuId } = subscription;
+      const orders = [];
+      const currentDate = new Date(startDate);
+
+      while (currentDate <= new Date(endDate)) {
+        // Add orders based on meal frequency
+        if (mealFrequency === 'daily' || (mealFrequency === 'alternate' && currentDate.getDate() % 2 === 0)) {
+          orders.push({
+            subscriptionId: subscription.id,
+            userId,
+            restaurantId,
+            menuId,
+            orderDate: new Date(currentDate),
+            status: 'pending', // Default order status
+          });
+        }
+
+        // Increment the date by 1 day
+        currentDate.setDate(currentDate.getDate() + 1);
+      }
+
+      // Bulk create orders
+      await Order.bulkCreate(orders);
+    }
 
     res.status(200).json({ message: 'Subscription status updated successfully', subscription });
   } catch (error) {
