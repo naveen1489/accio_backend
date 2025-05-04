@@ -5,6 +5,9 @@ module.exports = (sequelize, DataTypes) => {
   class User extends Model {
     static associate(models) {
       // Define associations here if needed
+       // A User has one Consumer
+       User.hasOne(models.Consumer, { foreignKey: 'userId', as: 'consumer' });
+
     }
   }
 
