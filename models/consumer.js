@@ -6,7 +6,10 @@ module.exports = (sequelize, DataTypes) => {
     static associate(models) {
       // A Consumer belongs to a User
       Consumer.belongsTo(models.User, { foreignKey: 'userId', as: 'user' });
+      // A Consumer has many Addresses
       Consumer.hasMany(models.Address, { foreignKey: 'consumerId', as: 'addresses' });
+      // A Consumer has one current/default Address
+      Consumer.belongsTo(models.Address, { foreignKey: 'currentAddressId', as: 'currentAddress' });
     }
   }
 
@@ -25,6 +28,15 @@ module.exports = (sequelize, DataTypes) => {
           key: 'id',
         },
         onDelete: 'CASCADE',
+      },
+      currentAddressId: {
+        type: DataTypes.UUID,
+        allowNull: true, // Foreign key to the Address table
+        references: {
+          model: 'Addresses',
+          key: 'id',
+        },
+        onDelete: 'SET NULL',
       },
       name: {
         type: DataTypes.STRING,

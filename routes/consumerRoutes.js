@@ -33,4 +33,7 @@ router.put('/address/update/:id', consumerController.updateAddress);
 // Delete address
 router.delete('/address/delete/:id', consumerController.deleteAddress);
 
+// Update current address
+router.patch('/address/update-current', addressController.updateCurrentAddress);
+
 module.exports = router;

@@ -165,6 +165,8 @@ exports.getAllConsumers = async (req, res) => {
 
 
 
+const { Address, Consumer } = require('../models');
+
 // Create Address
 exports.createAddress = async (req, res) => {
   try {
@@ -190,6 +192,12 @@ exports.createAddress = async (req, res) => {
       latitude,
       longitude,
     });
+
+    // If the consumer doesn't have a current address, set this as the default address
+    if (!consumer.currentAddressId) {
+      consumer.currentAddressId = address.id;
+      await consumer.save();
+    }
 
     res.status(201).json({ message: 'Address created successfully', address });
   } catch (error) {
@@ -262,6 +270,32 @@ exports.deleteAddress = async (req, res) => {
     res.status(200).json({ message: 'Address deleted successfully' });
   } catch (error) {
     console.error('Error deleting address:', error);
+    res.status(500).json({ message: 'Internal server error', error });
+  }
+};
+exports.updateCurrentAddress = async (req, res) => {
+  try {
+    const { consumerId, addressId } = req.body;
+
+    // Check if the consumer exists
+    const consumer = await Consumer.findByPk(consumerId);
+    if (!consumer) {
+      return res.status(404).json({ message: 'Consumer not found' });
+    }
+
+    // Check if the address exists and belongs to the consumer
+    const address = await Address.findOne({ where: { id: addressId, consumerId } });
+    if (!address) {
+      return res.status(404).json({ message: 'Address not found or does not belong to the consumer' });
+    }
+
+    // Update the current address
+    consumer.currentAddressId = addressId;
+    await consumer.save();
+
+    res.status(200).json({ message: 'Current address updated successfully', consumer });
+  } catch (error) {
+    console.error('Error updating current address:', error);
     res.status(500).json({ message: 'Internal server error', error });
   }
 };
