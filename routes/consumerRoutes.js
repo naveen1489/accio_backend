@@ -20,4 +20,17 @@ router.get('/consumer/:id', consumerController.getConsumerById);
 // Get all consumers
 router.get('/consumer', consumerController.getAllConsumers);
 
+
+// Create address
+router.post('/address/create', consumerController.createAddress);
+
+// Get addresses by consumer ID
+router.get('/address/consumer/:consumerId', consumerController.getAddressesByConsumerId);
+
+// Update address
+router.put('/address/update/:id', consumerController.updateAddress);
+
+// Delete address
+router.delete('/address/delete/:id', consumerController.deleteAddress);
+
 module.exports = router;

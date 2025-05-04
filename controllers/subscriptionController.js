@@ -195,3 +195,79 @@ exports.updateSubscriptionStatus = async (req, res) => {
     res.status(500).json({ message: 'Internal server error', error });
   }
 };
+
+exports.pauseSubscription = async (req, res) => {
+  try {
+    const { id } = req.params; // Subscription ID
+    const { pauseStartDate, pauseEndDate } = req.body; // Pause start and end dates
+
+    // Validate the pause dates
+    if (!pauseStartDate || !pauseEndDate) {
+      return res.status(400).json({ message: 'Pause start and end dates are required' });
+    }
+
+    const startDate = new Date(pauseStartDate);
+    const endDate = new Date(pauseEndDate);
+
+    if (startDate >= endDate) {
+      return res.status(400).json({ message: 'Pause end date must be after the start date' });
+    }
+
+    // Find the subscription by ID
+    const subscription = await Subscription.findByPk(id);
+    if (!subscription) {
+      return res.status(404).json({ message: 'Subscription not found' });
+    }
+
+    // Check if the subscription is already paused or cancelled
+    if (subscription.status === 'paused') {
+      return res.status(400).json({ message: 'Subscription is already paused' });
+    }
+    if (subscription.status === 'cancelled') {
+      return res.status(400).json({ message: 'Cannot pause a cancelled subscription' });
+    }
+
+    // Calculate the number of paused days
+    const pausedDays = Math.ceil((endDate - startDate) / (1000 * 60 * 60 * 24)); // Difference in days
+
+    // Update the subscription status to paused and adjust the end date
+    subscription.status = 'paused';
+    subscription.endDate = new Date(new Date(subscription.endDate).getTime() + pausedDays * 24 * 60 * 60 * 1000); // Extend endDate
+    subscription.pausedAt = startDate; // Save the pause start date
+    subscription.pauseEndDate = endDate; // Save the pause end date
+    await subscription.save();
+
+    res.status(200).json({ message: 'Subscription paused successfully', subscription });
+  } catch (error) {
+    console.error('Error pausing subscription:', error);
+    res.status(500).json({ message: 'Internal server error', error });
+  }
+};
+
+exports.resumeSubscription = async (req, res) => {
+  try {
+    const { id } = req.params; // Subscription ID
+
+    // Find the subscription by ID
+    const subscription = await Subscription.findByPk(id);
+    if (!subscription) {
+      return res.status(404).json({ message: 'Subscription not found' });
+    }
+
+    // Check if the subscription is paused
+    if (subscription.status !== 'paused') {
+      return res.status(400).json({ message: 'Subscription is not paused' });
+    }
+
+    // Update the subscription status to active and clear pause-related fields
+    subscription.status = 'active';
+    subscription.pausedAt = null;
+    subscription.pauseEndDate = null;
+    await subscription.save();
+
+    res.status(200).json({ message: 'Subscription resumed successfully', subscription });
+  } catch (error) {
+    console.error('Error resuming subscription:', error);
+    res.status(500).json({ message: 'Internal server error', error });
+  }
+};

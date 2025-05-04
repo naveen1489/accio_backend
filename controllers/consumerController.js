@@ -1,7 +1,6 @@
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-const { User, Consumer } = require('../models');
-
+const { User, Consumer, Address } = require('../models');
 // Create consumer
 exports.createConsumer = async (req, res) => {
   try {
@@ -160,6 +159,109 @@ exports.getAllConsumers = async (req, res) => {
     res.status(200).json({ consumers });
   } catch (error) {
     console.error('Error fetching consumers:', error);
+    res.status(500).json({ message: 'Internal server error', error });
+  }
+};
+
+
+
+// Create Address
+exports.createAddress = async (req, res) => {
+  try {
+    const { consumerId, addressTag, name, addressLine1, addressLine2, city, state, pincode, mobile, latitude, longitude } = req.body;
+
+    // Check if the consumer exists
+    const consumer = await Consumer.findByPk(consumerId);
+    if (!consumer) {
+      return res.status(404).json({ message: 'Consumer not found' });
+    }
+
+    // Create the address
+    const address = await Address.create({
+      consumerId,
+      addressTag,
+      name: addressTag === 'other' ? name : null, // Only set name if addressTag is "other"
+      addressLine1,
+      addressLine2,
+      city,
+      state,
+      pincode,
+      mobile,
+      latitude,
+      longitude,
+    });
+
+    res.status(201).json({ message: 'Address created successfully', address });
+  } catch (error) {
+    console.error('Error creating address:', error);
+    res.status(500).json({ message: 'Internal server error', error });
+  }
+};
+
+// Get Addresses by Consumer ID
+exports.getAddressesByConsumerId = async (req, res) => {
+  try {
+    const { consumerId } = req.params;
+
+    // Find all addresses for the given consumer
+    const addresses = await Address.findAll({ where: { consumerId } });
+
+    res.status(200).json({ addresses });
+  } catch (error) {
+    console.error('Error fetching addresses:', error);
+    res.status(500).json({ message: 'Internal server error', error });
+  }
+};
+
+// Update Address
+exports.updateAddress = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { addressTag, name, addressLine1, addressLine2, city, state, pincode, mobile, latitude, longitude } = req.body;
+
+    // Find the address by ID
+    const address = await Address.findByPk(id);
+    if (!address) {
+      return res.status(404).json({ message: 'Address not found' });
+    }
+
+    // Update fields
+    address.addressTag = addressTag || address.addressTag;
+    address.name = addressTag === 'other' ? name : null;
+    address.addressLine1 = addressLine1 || address.addressLine1;
+    address.addressLine2 = addressLine2 || address.addressLine2;
+    address.city = city || address.city;
+    address.state = state || address.state;
+    address.pincode = pincode || address.pincode;
+    address.mobile = mobile || address.mobile;
+    address.latitude = latitude || address.latitude;
+    address.longitude = longitude || address.longitude;
+
+    await address.save();
+
+    res.status(200).json({ message: 'Address updated successfully', address });
+  } catch (error) {
+    console.error('Error updating address:', error);
+    res.status(500).json({ message: 'Internal server error', error });
+  }
+};
+
+// Delete Address
+exports.deleteAddress = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // Find the address by ID
+    const address = await Address.findByPk(id);
+    if (!address) {
+      return res.status(404).json({ message: 'Address not found' });
+    }
+
+    await address.destroy();
+
+    res.status(200).json({ message: 'Address deleted successfully' });
+  } catch (error) {
+    console.error('Error deleting address:', error);
     res.status(500).json({ message: 'Internal server error', error });
   }
 };
