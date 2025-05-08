@@ -1,6 +1,6 @@
 'use strict';
 
-const { Subscription, Order } = require('../models/subscription');
+const { Subscription, Order, Restaurant, Menu, User } = require('../models');
 
 exports.createSubscription = async (req, res) => {
   try {

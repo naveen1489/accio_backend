@@ -164,9 +164,6 @@ exports.getAllConsumers = async (req, res) => {
 };
 
 
-
-const { Address, Consumer } = require('../models');
-
 // Create Address
 exports.createAddress = async (req, res) => {
   try {

@@ -3,22 +3,22 @@ const router = express.Router();
 const consumerController = require('../controllers/consumerController');
 
 // Create consumer
-router.post('/consumer/create', consumerController.createConsumer);
+router.post('/create', consumerController.createConsumer);
 
 // Login consumer
-router.post('/consumer/login', consumerController.loginConsumer);
+router.post('/login', consumerController.loginConsumer);
 
 // Update consumer
-router.put('/consumer/update/:id', consumerController.updateConsumer);
+router.put('/update/:id', consumerController.updateConsumer);
 
 // Delete consumer
-router.delete('/consumer/delete/:id', consumerController.deleteConsumer);
+router.delete('/delete/:id', consumerController.deleteConsumer);
 
 // Get consumer by ID
-router.get('/consumer/:id', consumerController.getConsumerById);
+router.get('/:id', consumerController.getConsumerById);
 
 // Get all consumers
-router.get('/consumer', consumerController.getAllConsumers);
+router.get('/', consumerController.getAllConsumers);
 
 
 // Create address
@@ -34,6 +34,6 @@ router.put('/address/update/:id', consumerController.updateAddress);
 router.delete('/address/delete/:id', consumerController.deleteAddress);
 
 // Update current address
-router.patch('/address/update-current', addressController.updateCurrentAddress);
+router.patch('/address/update-current', consumerController.updateCurrentAddress);
 
 module.exports = router;

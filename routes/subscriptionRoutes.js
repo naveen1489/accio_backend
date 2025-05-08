@@ -11,27 +11,25 @@ router.post('/create', authenticateToken, subscriptionController.createSubscript
 // Update an existing subscription
 router.put('/update/:id', authenticateToken, subscriptionController.updateSubscription);
 
-
-
 // Update subscription status
-router.patch('/subscriptions/:id/status', subscriptionController.updateSubscriptionStatus);
+router.patch('/:id/status', subscriptionController.updateSubscriptionStatus);
 
 // Get subscriptions by menu ID
-router.get('/subscriptions/menu/:menuId', subscriptionController.getSubscriptionsByMenuId);
+router.get('/menu/:menuId', subscriptionController.getSubscriptionsByMenuId);
 
 // Get subscriptions by restaurant ID
-router.get('/subscriptions/restaurant/:restaurantId', subscriptionController.getSubscriptionsByRestaurantId);
+router.get('/restaurant/:restaurantId', subscriptionController.getSubscriptionsByRestaurantId);
 
 // Get subscriptions by user ID
-router.get('/subscriptions/user/:userId', subscriptionController.getSubscriptionsByUserId);
+router.get('/user/:userId', subscriptionController.getSubscriptionsByUserId);
 
 // Get subscription by ID
-router.get('/subscriptions/:id', subscriptionController.getSubscriptionById);
+router.get('/:id', subscriptionController.getSubscriptionById);
 
 // Pause subscription
-router.patch('/subscriptions/:id/pause', subscriptionController.pauseSubscription);
+router.patch('/:id/pause', subscriptionController.pauseSubscription);
 
 // Resume subscription
-router.patch('/subscriptions/:id/resume', subscriptionController.resumeSubscription);
+router.patch('/:id/resume', subscriptionController.resumeSubscription);
 
 module.exports = router;

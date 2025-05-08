@@ -1,6 +1,6 @@
 'use strict';
 
-const { Menu, MenuCategory, MenuItem, Restaurant, Notification, MenuReview,User  } = require('../models');
+const { Menu, MenuCategory, MenuItem, Restaurant, Notification, MenuReview,User, Discount } = require('../models');
 
 //const NotificationService = require('../services/notificationService');
 
@@ -13,7 +13,8 @@ exports.createMenu = async (req, res) => {
             restaurantId,
             menuCategories,
             price,
-            discount // Discount JSON object
+            discount, // Discount JSON object
+            imageUrl // New field for menu image
         } = req.body;
 
         // Check if the restaurant exists
@@ -27,7 +28,8 @@ exports.createMenu = async (req, res) => {
             menuName,
             vegNonVeg,
             restaurantId,
-            price
+            price,
+            imageUrl 
         });
 
         // Add menu categories and items
@@ -89,7 +91,13 @@ exports.createMenu = async (req, res) => {
             });
         }
 
-        res.status(201).json({ message: 'Menu created successfully', menu });
+        res.status(201).json({ 
+            message: 'Menu created successfully', 
+            menu: {
+                ...menu.toJSON(), // Include all menu fields
+                imageUrl // Ensure imageUrl is included in the response
+            } 
+        });
     } catch (error) {
         console.error('Error creating menu:', error);
         res.status(500).json({ message: 'Internal server error', error });

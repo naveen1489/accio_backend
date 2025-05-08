@@ -43,6 +43,10 @@ module.exports = (sequelize, DataTypes) => {
             validate: {
                 min: 0 // Ensure price is non-negative
             }
+        },
+        imageUrl: {
+            type: DataTypes.TEXT,
+            allowNull: false 
         }
 
     }, {
