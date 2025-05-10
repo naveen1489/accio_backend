@@ -1,9 +1,7 @@
 'use strict';
 
 const { Op } = require('sequelize');
-const DeliveryPartner  = require('../models/deliveryPartner');
-const Delivery  = require('../models/delivery');
-
+const models = require('../models'); 
 
 /**
  * Add a new Delivery Partner.
@@ -13,20 +11,30 @@ const Delivery  = require('../models/delivery');
  */
 exports.addDeliveryPartner = async (req, res) => {
   try {
-    const { name, email, phone } = req.body;
+    const { name, email, phone, restaurantId, status, workingHoursStart, workingHoursEnd } = req.body;
     if (!name || !email || !phone) {
       return res.status(400).json({ message: 'Name, email, and phone are required' });
     }
 
-    // Assume the logged-in user (restaurant partner) has a restaurantId
-    const restaurantId = req.user.restaurantId || req.user.id;
+    // Check if a delivery partner with the same email or phone already exists
+    const existingPartner = await models.DeliveryPartner.findOne({
+      where: {
+        [Op.or]: [{ email }, { phone }],
+      },
+    });
+    if (existingPartner) {
+      return res.status(400).json({ message: 'A delivery partner with the same email or phone already exists' });
+    }
 
     // Create a new DeliveryPartner record
-    const newPartner = await DeliveryPartner.create({
+    const newPartner = await models.DeliveryPartner.create({
       name,
       email,
       phone,
       restaurantId,
+      status: status || 'inactive', 
+      workingHoursStart,
+      workingHoursEnd,
     });
 
     res.status(200).json({ message: 'Delivery partner added successfully', deliveryPartner: newPartner });
@@ -49,7 +57,7 @@ exports.assignDelivery = async (req, res) => {
     }
 
     // Create a new Delivery record with initial status as 'Assigned'
-    const delivery = await Delivery.create({
+    const delivery = await models.Delivery.create({ // <-- Use models.Delivery
       deliveryPartnerId,
       subscriptionId,
       deliveryAddress,
@@ -79,7 +87,7 @@ exports.getTodayDeliveries = async (req, res) => {
     const startOfDay = new Date(now.setHours(0, 0, 0, 0));
     const endOfDay = new Date(now.setHours(23, 59, 59, 999));
 
-    const deliveries = await Delivery.findAll({
+    const deliveries = await models.Delivery.findAll({ // <-- Use models.Delivery
       where: {
         deliveryPartnerId,
         deliveryTime: {
@@ -104,7 +112,7 @@ exports.getTodayDeliveries = async (req, res) => {
 exports.completeDelivery = async (req, res) => {
   try {
     const { id } = req.params; // Delivery record ID
-    const delivery = await Delivery.findByPk(id);
+    const delivery = await models.Delivery.findByPk(id); // <-- Use models.Delivery
     if (!delivery) {
       return res.status(404).json({ message: 'Delivery not found' });
     }
@@ -122,6 +130,53 @@ exports.completeDelivery = async (req, res) => {
     res.status(200).json({ message: 'Delivery marked as completed', delivery });
   } catch (error) {
     console.error('Error completing delivery:', error);
+    res.status(500).json({ message: 'Internal server error', error });
+  }
+};
+
+/**
+ * Get All Delivery Partners.
+ * This endpoint fetches all delivery partners.
+ */
+exports.getAllDeliveryPartners = async (req, res) => {
+  try {
+    const deliveryPartners = await models.DeliveryPartner.findAll(); 
+    res.status(200).json({ deliveryPartners });
+  } catch (error) {
+    console.error('Error fetching delivery partners:', error);
+    res.status(500).json({ message: 'Internal server error', error });
+  }
+};
+
+/**
+ * Update Delivery Partner Details.
+ * This endpoint allows updating name, phone, status, and working hours.
+ * Expected body fields: name, phone, status, workingHoursStart, workingHoursEnd.
+ */
+exports.updateDeliveryPartnerDetails = async (req, res) => {
+  try {
+    const { id } = req.params; // Delivery Partner ID
+    const { name, phone, status, workingHoursStart, workingHoursEnd } = req.body;
+
+    // Find the delivery partner by ID
+    const deliveryPartner = await models.DeliveryPartner.findByPk(id);
+    if (!deliveryPartner) {
+      return res.status(404).json({ message: 'Delivery partner not found' });
+    }
+
+    // Update fields if provided
+    deliveryPartner.name = name || deliveryPartner.name;
+    deliveryPartner.phone = phone || deliveryPartner.phone;
+    deliveryPartner.status = status || deliveryPartner.status;
+    deliveryPartner.workingHoursStart = workingHoursStart || deliveryPartner.workingHoursStart;
+    deliveryPartner.workingHoursEnd = workingHoursEnd || deliveryPartner.workingHoursEnd;
+
+    // Save the updated delivery partner
+    await deliveryPartner.save();
+
+    res.status(200).json({ message: 'Delivery partner details updated successfully', deliveryPartner });
+  } catch (error) {
+    console.error('Error updating delivery partner details:', error);
     res.status(500).json({ message: 'Internal server error', error });
   }
 };

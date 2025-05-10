@@ -17,4 +17,10 @@ router.get('/today-deliveries', authenticateToken, deliveryPartnerController.get
 // Route for a delivery partner to mark a delivery as completed
 router.post('/complete-delivery/:id', authenticateToken, deliveryPartnerController.completeDelivery);
 
+// Route to get all delivery partners
+router.get('/all-devlieryPartners', authenticateToken, deliveryPartnerController.getAllDeliveryPartners);
+
+// Update delivery partner details
+router.put('/update/:id', authenticateToken, deliveryPartnerController.updateDeliveryPartnerDetails);
+
 module.exports = router;
