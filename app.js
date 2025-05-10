@@ -20,6 +20,7 @@ const menuRoutes = require('./routes/menuRoutes'); // Import menu routes
 const notificationRoutes = require('./routes/notificationRoutes'); // Import notification routes
 const statisticRoutes = require('./routes/statisticRoutes'); // Import statistic routes
 const consumerRoutes = require('./routes/consumerRoutes'); // Import consumer routes
+const orderRoutes = require('./routes/orderRoutes'); // Import order routes
 
 const app = express();
 
@@ -38,6 +39,7 @@ app.use('/api/menus', menuRoutes); // Add menu routes
 app.use('/api/notifications', notificationRoutes); // Add notification routes
 app.use('/api/statistics', statisticRoutes); // Add statistic routes
 app.use('/api/consumers', consumerRoutes); // Add consumer routes
+app.use('/api/orders', orderRoutes);
 
 // Default route
 app.get('/', (req, res) => {

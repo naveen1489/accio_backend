@@ -39,7 +39,8 @@ exports.getOrders = async (req, res) => {
         {
           model: Menu,
           as: 'menu',
-          attributes: ['id', 'name', 'price', 'description', 'categoryName'], // Include menu details
+          // attributes: ['id', 'name', 'price', 'description', 'categoryName'], 
+           attributes: ['id', 'menuName', 'price',],
           where: categoryName ? { categoryName } : {}, // Filter by category if provided
         },
         {

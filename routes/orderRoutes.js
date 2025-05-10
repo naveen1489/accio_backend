@@ -3,7 +3,7 @@ const router = express.Router();
 const orderController = require('../controllers/orderController');
 
 // Get orders with filters
-router.get('/orders', orderController.getOrders);
+router.get('/', orderController.getOrders);
 // Assign order to delivery partner
 router.patch('/orders/assign', orderController.assignOrderToDeliveryPartner);
 // Get orders for a delivery partner
