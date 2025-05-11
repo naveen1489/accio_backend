@@ -1,5 +1,5 @@
 const { Op } = require('sequelize');
-const { Order, Menu, Subscription, DeliveryPartner, Restaurant } = require('../models');
+const { Order, Menu, Subscription, DeliveryPartner, Restaurant, Consumer } = require('../models');
 
 
 // Get orders with filters
