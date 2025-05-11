@@ -6,9 +6,7 @@ module.exports = (sequelize, DataTypes) => {
     static associate(models) {
       // An Order belongs to a Subscription
       Order.belongsTo(models.Subscription, { foreignKey: 'subscriptionId', as: 'subscription' });
-      // An Order belongs to a User
-      Order.belongsTo(models.User, { foreignKey: 'userId', as: 'user' });
-      // An Order belongs to a Restaurant
+       // An Order belongs to a Restaurant
       Order.belongsTo(models.Restaurant, { foreignKey: 'restaurantId', as: 'restaurant' });
       // An Order belongs to a Menu
       Order.belongsTo(models.Menu, { foreignKey: 'menuId', as: 'menu' });
