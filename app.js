@@ -21,7 +21,7 @@ const notificationRoutes = require('./routes/notificationRoutes'); // Import not
 const statisticRoutes = require('./routes/statisticRoutes'); // Import statistic routes
 const consumerRoutes = require('./routes/consumerRoutes'); // Import consumer routes
 const orderRoutes = require('./routes/orderRoutes'); // Import order routes
-
+const { swaggerUi, swaggerSpec } = require('./config/swagger'); // Import Swagger configuration
 const app = express();
 
 // Middleware
@@ -40,7 +40,8 @@ app.use('/api/notifications', notificationRoutes); // Add notification routes
 app.use('/api/statistics', statisticRoutes); // Add statistic routes
 app.use('/api/consumers', consumerRoutes); // Add consumer routes
 app.use('/api/orders', orderRoutes);
-
+// Swagger UI setup
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 // Default route
 app.get('/', (req, res) => {
   res.send('Welcome to the Daily Meals Subscription Backend!');
