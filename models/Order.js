@@ -13,6 +13,7 @@ module.exports = (sequelize, DataTypes) => {
       // An Order belongs to a Menu
       Order.belongsTo(models.Menu, { foreignKey: 'menuId', as: 'menu' });
       Order.belongsTo(models.DeliveryPartner, { foreignKey: 'deliveryPartnerId', as: 'deliveryPartner' });
+      Order.belongsTo(models.Consumer, { foreignKey: 'userId', as: 'consumer' });
     }
   }
 

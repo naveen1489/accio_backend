@@ -10,6 +10,7 @@ module.exports = (sequelize, DataTypes) => {
       Consumer.hasMany(models.Address, { foreignKey: 'consumerId', as: 'addresses' });
       // A Consumer has one current/default Address
       Consumer.belongsTo(models.Address, { foreignKey: 'currentAddressId', as: 'currentAddress' });
+      Consumer.hasMany(models.Order, { foreignKey: 'userId', as: 'orders' });
     }
   }
 
