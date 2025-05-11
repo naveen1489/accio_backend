@@ -32,21 +32,35 @@ exports.getOrders = async (req, res) => {
       };
     }
 
-    // Query the orders with filters and include menu details
+    // Query the orders with filters and include related details
     const orders = await Order.findAll({
       where: filters,
       include: [
         {
           model: Menu,
           as: 'menu',
-          // attributes: ['id', 'name', 'price', 'description', 'categoryName'], 
-           attributes: ['id', 'menuName', 'price',],
+          attributes: ['id', 'menuName', 'price'], // Include menu details
           where: categoryName ? { categoryName } : {}, // Filter by category if provided
         },
         {
           model: Subscription,
           as: 'subscription',
           attributes: ['id', 'mealPlan', 'mealFrequency'], // Include subscription details
+        },
+        {
+          model: DeliveryPartner,
+          as: 'deliveryPartner',
+          attributes: ['id', 'name'], // Include delivery partner name
+        },
+        {
+          model: Restaurant,
+          as: 'restaurant',
+          attributes: ['id', 'name'], // Include restaurant details
+        },
+        {
+          model: Consumer,
+          as: 'consumer',
+          attributes: ['id', 'name'], // Include consumer name
         },
       ],
     });
