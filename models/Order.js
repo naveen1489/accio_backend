@@ -52,7 +52,7 @@ module.exports = (sequelize, DataTypes) => {
         onDelete: 'SET NULL', // If the delivery partner is deleted, set this field to null
       },
       status: {
-        type: DataTypes.ENUM('pending', 'completed', 'cancelled'),
+        type: DataTypes.ENUM('pending', 'completed', 'cancelled', 'assigned'),
         defaultValue: 'pending',
       },
     },
