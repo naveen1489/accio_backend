@@ -12,6 +12,7 @@ module.exports = (sequelize, DataTypes) => {
       Order.belongsTo(models.Restaurant, { foreignKey: 'restaurantId', as: 'restaurant' });
       // An Order belongs to a Menu
       Order.belongsTo(models.Menu, { foreignKey: 'menuId', as: 'menu' });
+      Order.belongsTo(models.DeliveryPartner, { foreignKey: 'deliveryPartnerId', as: 'deliveryPartner' });
     }
   }
 
