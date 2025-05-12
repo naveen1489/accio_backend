@@ -1,6 +1,6 @@
 'use strict';
 
-const { Subscription, Order, Restaurant, Menu, User } = require('../models');
+const { Subscription, Order, Restaurant, Menu, User , Consumer} = require('../models');
 
 exports.createSubscription = async (req, res) => {
   try {
@@ -91,7 +91,7 @@ exports.getSubscriptionsByMenuId = async (req, res) => {
     const subscriptions = await Subscription.findAll({
       where: { menuId },
       include: [
-        { model: User, as: 'customer' },
+        { model: Consumer, as: 'customer' },
         { model: Restaurant, as: 'restaurant' },
         { model: Menu, as: 'menu' },
       ],
@@ -111,7 +111,7 @@ exports.getSubscriptionsByRestaurantId = async (req, res) => {
     const subscriptions = await Subscription.findAll({
       where: { restaurantId },
       include: [
-        { model: User, as: 'customer' },
+        { model: Consumer, as: 'customer' },
         { model: Restaurant, as: 'restaurant' },
         { model: Menu, as: 'menu' },
       ],
@@ -150,7 +150,7 @@ exports.getSubscriptionById = async (req, res) => {
     // Find subscription by ID
     const subscription = await Subscription.findByPk(id, {
       include: [
-        { model: User, as: 'customer' },
+        { model: Consumer, as: 'customer' },
         { model: Restaurant, as: 'restaurant' },
         { model: Menu, as: 'menu' },
       ],
