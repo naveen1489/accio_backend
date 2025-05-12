@@ -179,8 +179,11 @@ exports.updateSubscriptionStatus = async (req, res) => {
       return res.status(400).json({ message: `Invalid status. Valid statuses are: ${validStatuses.join(', ')}` });
     }
 
-    // Find the subscription by ID
-    const subscription = await Subscription.findByPk(id);
+    // Find the subscription by ID and include the Consumer model
+    const subscription = await Subscription.findByPk(id, {
+      include: [{ model: Consumer, as: 'customer' }], // Include the Consumer model to get userId
+    });
+
     if (!subscription) {
       return res.status(404).json({ message: 'Subscription not found' });
     }
@@ -191,7 +194,9 @@ exports.updateSubscriptionStatus = async (req, res) => {
 
     // If the status is approved, generate orders
     if (status === 'approved') {
-      const { startDate, endDate, mealFrequency, userId, restaurantId, menuId } = subscription;
+      const { startDate, endDate, mealFrequency, restaurantId, menuId } = subscription;
+      const userId = subscription.consumerId; // Retrieve userId from the associated Consumer
+     console.log('User ID:', userId); // Debugging
       const orders = [];
       const currentDate = new Date(startDate);
 
@@ -200,7 +205,7 @@ exports.updateSubscriptionStatus = async (req, res) => {
         if (mealFrequency === 'daily' || (mealFrequency === 'alternate' && currentDate.getDate() % 2 === 0)) {
           orders.push({
             subscriptionId: subscription.id,
-            userId,
+            userId, // Set the userId correctly
             restaurantId,
             menuId,
             orderDate: new Date(currentDate),
