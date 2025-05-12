@@ -5,7 +5,7 @@ const { Subscription, Order, Restaurant, Menu, User } = require('../models');
 exports.createSubscription = async (req, res) => {
   try {
     const {
-      userId,
+      consumerId,
       restaurantId,
       menuId,
       categoryName,
@@ -29,7 +29,7 @@ exports.createSubscription = async (req, res) => {
 
     // Create the subscription
     const subscription = await Subscription.create({
-      userId,
+      consumerId,
       restaurantId,
       menuId,
       categoryName,

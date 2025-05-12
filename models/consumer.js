@@ -11,6 +11,9 @@ module.exports = (sequelize, DataTypes) => {
       // A Consumer has one current/default Address
       Consumer.belongsTo(models.Address, { foreignKey: 'currentAddressId', as: 'currentAddress' });
       Consumer.hasMany(models.Order, { foreignKey: 'userId', as: 'orders' });
+    // A Consumer has many Subscriptions
+    Consumer.hasMany(models.Subscription, { foreignKey: 'consumerId', as: 'subscriptions' });
+ 
     }
   }
 

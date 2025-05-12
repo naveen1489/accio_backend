@@ -4,8 +4,8 @@ const { Model } = require('sequelize');
 module.exports = (sequelize, DataTypes) => {
   class Subscription extends Model {
     static associate(models) {
-      // A Subscription belongs to a User (the customer)
-      Subscription.belongsTo(models.Consumer, { foreignKey: 'userId', as: 'customer' });
+      // A Subscription belongs to a Consumer (the customer)
+      Subscription.belongsTo(models.Consumer, { foreignKey: 'consumerId', as: 'customer' });
       // A Subscription belongs to a Restaurant (the partner providing the meals)
       Subscription.belongsTo(models.Restaurant, { foreignKey: 'restaurantId', as: 'restaurant' });
       // A Subscription belongs to a Menu
@@ -20,17 +20,22 @@ module.exports = (sequelize, DataTypes) => {
         defaultValue: DataTypes.UUIDV4,
         primaryKey: true,
       },
-      userId: {
+      consumerId: {
         type: DataTypes.UUID,
-        allowNull: false,
+        allowNull: false, // Foreign key to the Consumer table
+        references: {
+          model: 'Consumers',
+          key: 'id',
+        },
+        onDelete: 'CASCADE',
       },
       restaurantId: {
         type: DataTypes.UUID,
-        allowNull: false,
+        allowNull: false, // Foreign key to the Restaurant table
       },
       menuId: {
         type: DataTypes.UUID,
-        allowNull: false, // Link to the Menu table
+        allowNull: false, // Foreign key to the Menu table
       },
       categoryName: {
         type: DataTypes.STRING,
