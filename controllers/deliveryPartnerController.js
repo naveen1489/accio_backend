@@ -51,8 +51,12 @@ exports.addDeliveryPartner = async (req, res) => {
  */
 exports.assignDelivery = async (req, res) => {
   try {
-    const { deliveryPartnerId, subscriptionId, deliveryAddress, deliveryTime } = req.body;
-    if (!deliveryPartnerId || !subscriptionId || !deliveryAddress || !deliveryTime) {
+    // const { deliveryPartnerId, subscriptionId, deliveryAddress, deliveryTime } = req.body;
+    // if (!deliveryPartnerId || !subscriptionId || !deliveryAddress || !deliveryTime) {
+    //   return res.status(400).json({ message: 'Missing required fields' });
+    // }
+    const { deliveryPartnerId, subscriptionId } = req.body;
+    if (!deliveryPartnerId || !subscriptionId) {
       return res.status(400).json({ message: 'Missing required fields' });
     }
 
@@ -60,8 +64,8 @@ exports.assignDelivery = async (req, res) => {
     const delivery = await models.Delivery.create({ // <-- Use models.Delivery
       deliveryPartnerId,
       subscriptionId,
-      deliveryAddress,
-      deliveryTime,
+      deliveryAddress: '123 Main St, City, State, ZIP', // Example address
+      deliveryTime :"2023-10-01T10:00:00Z", 
       status: 'Assigned',
     });
 

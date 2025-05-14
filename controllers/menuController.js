@@ -14,7 +14,8 @@ exports.createMenu = async (req, res) => {
             menuCategories,
             price,
             discount, // Discount JSON object
-            imageUrl // New field for menu image
+            imageUrl, // New field for menu image
+            description,
         } = req.body;
 
         // Check if the restaurant exists
@@ -29,7 +30,8 @@ exports.createMenu = async (req, res) => {
             vegNonVeg,
             restaurantId,
             price,
-            imageUrl 
+            imageUrl,
+            description 
         });
 
         // Add menu categories and items
@@ -83,8 +85,8 @@ exports.createMenu = async (req, res) => {
 
         if (user) {
             await Notification.create({
-                ReceiverId: user.id, // Replace with the actual admin ID
-                SenderId: restaurantId, // The restaurant ID is the sender
+                ReceiverId: user.id,
+                SenderId: restaurantId, 
                 NotificationMessage: `A new menu "${menuName}" has been created by restaurant "${restaurant.name}".`,
                 NotificationType: 'Menu Creation',
                 NotificationMetadata: { menuId: menu.id }
@@ -94,8 +96,9 @@ exports.createMenu = async (req, res) => {
         res.status(201).json({ 
             message: 'Menu created successfully', 
             menu: {
-                ...menu.toJSON(), // Include all menu fields
-                imageUrl // Ensure imageUrl is included in the response
+                ...menu.toJSON(),
+                imageUrl,
+                description
             } 
         });
     } catch (error) {
