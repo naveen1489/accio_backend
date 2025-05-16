@@ -2,7 +2,7 @@
 
 const { Menu, MenuCategory, MenuItem, Restaurant, Notification, MenuReview,User, Discount } = require('../models');
 
-//const NotificationService = require('../services/notificationService');
+// const NotificationService = require('../services/notificationService');
 
 // Create a new menu
 exports.createMenu = async (req, res) => {
@@ -111,7 +111,7 @@ exports.createMenu = async (req, res) => {
 exports.updateMenu = async (req, res) => {
     try {
         const { id } = req.params;
-        const { menuName, vegNonVeg, menuCategories,price } = req.body;
+        const { menuName, vegNonVeg, menuCategories, price, restaurantId, discount } = req.body;
 
         // Find the menu
         const menu = await Menu.findByPk(id);
@@ -133,7 +133,8 @@ exports.updateMenu = async (req, res) => {
             for (const menuCategory of menuCategories) {
                 const createdMenuCategory = await MenuCategory.create({
                     menuId: menu.id,
-                    categoryName: menuCategory.categoryName
+                    categoryName: menuCategory.categoryName,
+                    day:menuCategory.day
                 });
 
                 if (menuCategory.menuItems && menuCategory.menuItems.length > 0) {
@@ -147,16 +148,84 @@ exports.updateMenu = async (req, res) => {
             }
         }
 
+        // Handle discount update
+        if (discount) {
+            const {
+                discountEnabled,
+                discountType,
+                discountValue,
+                discountStartDate,
+                discountEndDate
+            } = discount;
+
+            let menuDiscount = await Discount.findOne({ where: { menuId: menu.id } });
+
+            if (discountEnabled) {
+                if (menuDiscount) {
+                    menuDiscount.discountEnabled = discountEnabled;
+                    menuDiscount.discountType = discountType;
+                    menuDiscount.discountValue = discountValue;
+                    menuDiscount.discountStartDate = discountStartDate;
+                    menuDiscount.discountEndDate = discountEndDate;
+                    await menuDiscount.save();
+                } else {
+                    await Discount.create({
+                        menuId: menu.id,
+                        discountEnabled,
+                        discountType,
+                        discountValue,
+                        discountStartDate,
+                        discountEndDate
+                    });
+                }
+            } else if (menuDiscount) {
+                await menuDiscount.destroy();
+            }
+        }
+
         // Create a notification for the admin
-        await NotificationService.createNotification({
-            ReceiverId: 'admin-id', // Replace with the actual admin ID
-            SenderId: menu.restaurantId, // The restaurant ID is the sender
-            NotificationMessage: `The menu "${menuName}" has been updated.`,
-            NotificationType: 'menu_update',
-            NotificationMetadata: { menuId: menu.id }
+        const restaurant = await Restaurant.findByPk(restaurantId);
+        if (!restaurant) {
+            return res.status(404).json({ message: 'Restaurant not found' });
+        }
+
+
+        const user = await User.findOne({
+            where: { role: 'admin' },
+            attributes: ['id'], // Only get the 'id' field
+            order: [['createdAt', 'DESC']], // optional: most recent
+            limit: 1
         });
 
-        res.status(200).json({ message: 'Menu updated successfully', menu });
+        if (user) {
+            await Notification.create({
+                ReceiverId: user.id,
+                SenderId: restaurantId, 
+                NotificationMessage: `A new menu "${menuName}" has been created by restaurant "${restaurant.name}".`,
+                NotificationType: 'Menu Creation',
+                NotificationMetadata: { menuId: menu.id }
+            });
+        }
+        
+        // Fetch updated menu with discount and categories
+        const updatedMenu = await Menu.findByPk(menu.id, {
+            include: [
+                {
+                    model: MenuCategory,
+                    as: 'menuCategories',
+                    include: {
+                        model: MenuItem,
+                        as: 'menuItems'
+                    }
+                },
+                {
+                    model: Discount,
+                    as: 'discount'
+                },
+            ]
+        });
+
+        res.status(200).json({ message: 'Menu updated successfully', menu: updatedMenu });
     } catch (error) {
         console.error('Error updating menu:', error);
         res.status(500).json({ message: 'Internal server error', error });
