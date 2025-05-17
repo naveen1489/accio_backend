@@ -62,6 +62,11 @@ exports.getOrders = async (req, res) => {
           as: 'consumer',
           attributes: ['id', 'name'], // Include consumer name
         },
+        {
+          model: Address,
+          as: 'address',
+          attributes: ['id', 'addressLine1', 'addressLine2', 'city', 'state', 'postalCode'], // Include address details
+        },
       ],
     });
 
