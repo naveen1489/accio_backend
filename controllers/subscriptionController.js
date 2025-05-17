@@ -223,7 +223,7 @@ exports.updateSubscriptionStatus = async (req, res) => {
             restaurantId,
             menuId,
             addressId, 
-            orderDate: new Date(currentDate),
+            orderDate: new Date(),
             status: 'pending', // Default order status
             orderNumber, // Add the generated order number
           });
