@@ -4,6 +4,8 @@ const { Model } = require('sequelize');
 module.exports = (sequelize, DataTypes) => {
   class Subscription extends Model {
     static associate(models) {
+      Subscription.belongsTo(models.Address, { foreignKey: 'addressId', as: 'address' });
+  
       // A Subscription belongs to a Consumer (the customer)
       Subscription.belongsTo(models.Consumer, { foreignKey: 'consumerId', as: 'customer' });
       // A Subscription belongs to a Restaurant (the partner providing the meals)
