@@ -79,6 +79,15 @@ module.exports = (sequelize, DataTypes) => {
         allowNull: false,
         defaultValue: 'pending', // Default payment status
       },
+      addressId: {
+        type: DataTypes.UUID,
+        allowNull: true, // Allow null initially
+        references: {
+          model: 'Addresses', // Reference the Addresses table
+          key: 'id',
+        },
+        onDelete: 'SET NULL', // If the address is deleted, set this field to null
+      },
     },
     {
       sequelize,

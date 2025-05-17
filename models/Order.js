@@ -59,6 +59,15 @@ module.exports = (sequelize, DataTypes) => {
         type: DataTypes.STRING,
         allowNull: false, // Ensure this field is required
       },
+      addressId: {
+        type: DataTypes.UUID,
+        allowNull: true, // Allow null initially
+        references: {
+          model: 'Addresses', // Reference the Addresses table
+          key: 'id',
+        },
+        onDelete: 'SET NULL', // If the address is deleted, set this field to null
+      },
     },
     {
       sequelize,
