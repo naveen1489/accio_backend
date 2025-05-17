@@ -207,7 +207,7 @@ exports.updateSubscriptionStatus = async (req, res) => {
 
     // If the status is approved, generate orders
     if (status === 'approved') {
-      const { startDate, endDate, mealFrequency, restaurantId, menuId } = subscription;
+      const { startDate, endDate, mealFrequency, restaurantId, menuId, addressId } = subscription;
       const userId = subscription.consumerId; // Retrieve userId from the associated Consumer
      console.log('User ID:', userId); // Debugging
       const orders = [];
