@@ -310,4 +310,52 @@ router.patch('/:id/pause', subscriptionController.pauseSubscription);
  */
 router.patch('/:id/resume', subscriptionController.resumeSubscription);
 
+
+
+/**
+ * @swagger
+ * /api/subscriptions/{id}/payment-status:
+ *   patch:
+ *     summary: Update payment status for a subscription
+ *     tags: [Subscriptions]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: ID of the subscription
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               paymentStatus:
+ *                 type: string
+ *                 enum: [pending, paid, failed]
+ *           example:
+ *             paymentStatus: "paid"
+ *     responses:
+ *       200:
+ *         description: Payment status updated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                 subscription:
+ *                   $ref: '#/components/schemas/Subscription'
+ *       400:
+ *         description: Invalid payment status
+ *       404:
+ *         description: Subscription not found
+ *       500:
+ *         description: Internal server error
+ */
+router.patch('/:id/payment-status', subscriptionController.updatePaymentStatus);
+
 module.exports = router;

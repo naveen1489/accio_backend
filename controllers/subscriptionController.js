@@ -305,3 +305,30 @@ exports.resumeSubscription = async (req, res) => {
     res.status(500).json({ message: 'Internal server error', error });
   }
 };
+exports.updatePaymentStatus = async (req, res) => {
+  try {
+    const { id } = req.params; // Subscription ID
+    const { paymentStatus } = req.body; // New payment status
+
+    // Validate the payment status
+    const validPaymentStatuses = ['pending', 'paid', 'failed'];
+    if (!validPaymentStatuses.includes(paymentStatus)) {
+      return res.status(400).json({ message: `Invalid payment status. Valid statuses are: ${validPaymentStatuses.join(', ')}` });
+    }
+
+    // Find the subscription by ID
+    const subscription = await Subscription.findByPk(id);
+    if (!subscription) {
+      return res.status(404).json({ message: 'Subscription not found' });
+    }
+
+    // Update the payment status
+    subscription.paymentStatus = paymentStatus;
+    await subscription.save();
+
+    res.status(200).json({ message: 'Payment status updated successfully', subscription });
+  } catch (error) {
+    console.error('Error updating payment status:', error);
+    res.status(500).json({ message: 'Internal server error', error });
+  }
+};

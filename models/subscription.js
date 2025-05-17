@@ -69,6 +69,16 @@ module.exports = (sequelize, DataTypes) => {
         type: DataTypes.DATE,
         allowNull: true, // This field is set when the subscription is paused
       },
+      paymentAmount: {
+        type: DataTypes.FLOAT, // Payment amount as a floating-point number
+        allowNull: false,
+        defaultValue: 0.0, // Default value for payment amount
+      },
+      paymentStatus: {
+        type: DataTypes.ENUM('pending', 'paid', 'failed'), // Payment status options
+        allowNull: false,
+        defaultValue: 'pending', // Default payment status
+      },
     },
     {
       sequelize,
