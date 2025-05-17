@@ -4,7 +4,7 @@ module.exports = {
   up: async (queryInterface, Sequelize) => {
     await queryInterface.addColumn('Menus', 'description', {
       type: Sequelize.STRING,
-      allowNull: false,
+      allowNull: true,
     });
   },
 
