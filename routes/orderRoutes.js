@@ -81,7 +81,7 @@ router.get('/', orderController.getOrders);
  *       500:
  *         description: Internal server error
  */
-router.patch('/orders/assign', orderController.assignOrderToDeliveryPartner);
+router.patch('/assign', orderController.assignOrderToDeliveryPartner);
 
 /**
  * @swagger
@@ -141,6 +141,6 @@ router.get('/orders/delivery-partner/:deliveryPartnerId', orderController.getOrd
  *       500:
  *         description: Internal server error
  */
-router.patch('/orders/:orderId/status', orderController.updateOrderStatusByDeliveryPartner);
+router.patch('/:orderId/status', orderController.updateOrderStatusByDeliveryPartner);
 
 module.exports = router;
