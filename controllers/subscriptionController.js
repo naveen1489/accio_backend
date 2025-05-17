@@ -27,6 +27,15 @@ exports.createSubscription = async (req, res) => {
       return res.status(404).json({ message: 'Menu not found' });
     }
 
+     // Fetch the currentAddressId from the Consumer table
+     const consumer = await Consumer.findByPk(consumerId);
+     if (!consumer) {
+       return res.status(404).json({ message: 'Consumer not found' });
+     }
+ 
+     const addressId = consumer.currentAddressId; // Get the current address ID from the Consumer
+ 
+
     // Create the subscription
     const subscription = await Subscription.create({
       consumerId,
@@ -37,6 +46,7 @@ exports.createSubscription = async (req, res) => {
       mealFrequency,
       startDate,
       endDate,
+      addressId,
       status: 'pending', // Default status
     });
 
@@ -209,6 +219,7 @@ exports.updateSubscriptionStatus = async (req, res) => {
             userId, // Set the userId correctly
             restaurantId,
             menuId,
+            addressId, 
             orderDate: new Date(currentDate),
             status: 'pending', // Default order status
             orderNumber, // Add the generated order number
