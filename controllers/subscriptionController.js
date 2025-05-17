@@ -124,6 +124,11 @@ exports.getSubscriptionsByRestaurantId = async (req, res) => {
         { model: Consumer, as: 'customer' },
         { model: Restaurant, as: 'restaurant' },
         { model: Menu, as: 'menu' },
+        {
+          model: Address,
+          as: 'address',
+          attributes: ['id', 'addressLine1', 'addressLine2', 'city', 'state', 'postalCode'], // Include address details
+        },
       ],
     });
 
