@@ -55,6 +55,10 @@ module.exports = (sequelize, DataTypes) => {
         type: DataTypes.ENUM('pending', 'completed', 'cancelled', 'assigned'),
         defaultValue: 'pending',
       },
+      orderNumber: {
+        type: DataTypes.STRING,
+        allowNull: false, // Ensure this field is required
+      },
     },
     {
       sequelize,
