@@ -43,12 +43,12 @@ app.use('/api/consumers', consumerRoutes); // Add consumer routes
 app.use('/api/orders', orderRoutes);
 
 // Include test routes only in non-production environments
-if (process.env.NODE_ENV !== 'production') {
+//if (process.env.NODE_ENV !== 'production') {
   app.use('/api/test', testRoutes);
 // Swagger UI setup
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
-}
+//}
 
 // Default route
 app.get('/', (req, res) => {
