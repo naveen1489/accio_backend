@@ -13,6 +13,10 @@ const swaggerDefinition = {
       url: 'http://localhost:3000/', // Base URL for your API
       description: 'Development server',
     },
+    {
+      url: 'https://accio-backend.onrender.com/', // Base URL for your API
+      description: 'Production server',
+    },
   ],
   components: {
     securitySchemes: {
