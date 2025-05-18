@@ -1,17 +1,26 @@
-'use strict';
-const { Model } = require('sequelize');
+"use strict";
+const { Model } = require("sequelize");
 
 module.exports = (sequelize, DataTypes) => {
   class Subscription extends Model {
     static associate(models) {
-      Subscription.belongsTo(models.Address, { foreignKey: 'addressId', as: 'address' });
-  
+      Subscription.belongsTo(models.Address, {
+        foreignKey: "addressId",
+        as: "address",
+      });
+
       // A Subscription belongs to a Consumer (the customer)
-      Subscription.belongsTo(models.Consumer, { foreignKey: 'consumerId', as: 'customer' });
+      Subscription.belongsTo(models.Consumer, {
+        foreignKey: "consumerId",
+        as: "customer",
+      });
       // A Subscription belongs to a Restaurant (the partner providing the meals)
-      Subscription.belongsTo(models.Restaurant, { foreignKey: 'restaurantId', as: 'restaurant' });
+      Subscription.belongsTo(models.Restaurant, {
+        foreignKey: "restaurantId",
+        as: "restaurant",
+      });
       // A Subscription belongs to a Menu
-      Subscription.belongsTo(models.Menu, { foreignKey: 'menuId', as: 'menu' });
+      Subscription.belongsTo(models.Menu, { foreignKey: "menuId", as: "menu" });
     }
   }
 
@@ -26,10 +35,10 @@ module.exports = (sequelize, DataTypes) => {
         type: DataTypes.UUID,
         allowNull: false, // Foreign key to the Consumer table
         references: {
-          model: 'Consumers',
-          key: 'id',
+          model: "Consumers",
+          key: "id",
         },
-        onDelete: 'CASCADE',
+        onDelete: "CASCADE",
       },
       restaurantId: {
         type: DataTypes.UUID,
@@ -44,12 +53,12 @@ module.exports = (sequelize, DataTypes) => {
         allowNull: false, // E.g., "Vegetarian", "Non-Vegetarian", etc.
       },
       mealPlan: {
-        type: DataTypes.ENUM('weekly', 'monthly'),
-        allowNull: false, // E.g., "weekly" or "monthly"
+        type: DataTypes.ENUM("1 Week", "2 Week", "4 Week"),
+        allowNull: false, 
       },
       mealFrequency: {
-        type: DataTypes.ENUM('daily', 'alternate', 'custom'),
-        allowNull: false, // E.g., "daily", "alternate days", or "custom"
+        type: DataTypes.ENUM("Mon-Fri", "Mon-Sat", "Mon-Sun"),
+        allowNull: false, 
       },
       startDate: {
         type: DataTypes.DATE,
@@ -60,8 +69,14 @@ module.exports = (sequelize, DataTypes) => {
         allowNull: false,
       },
       status: {
-        type: DataTypes.ENUM('pending', 'rejected', 'approved', 'completed', 'cancelled'),
-        defaultValue: 'pending',
+        type: DataTypes.ENUM(
+          "pending",
+          "rejected",
+          "approved",
+          "completed",
+          "cancelled"
+        ),
+        defaultValue: "pending",
       },
       pausedAt: {
         type: DataTypes.DATE,
@@ -77,23 +92,23 @@ module.exports = (sequelize, DataTypes) => {
         defaultValue: 0.0, // Default value for payment amount
       },
       paymentStatus: {
-        type: DataTypes.ENUM('pending', 'paid', 'failed'), // Payment status options
+        type: DataTypes.ENUM("pending", "paid", "failed"), // Payment status options
         allowNull: false,
-        defaultValue: 'pending', // Default payment status
+        defaultValue: "pending", // Default payment status
       },
       addressId: {
         type: DataTypes.UUID,
         allowNull: true, // Allow null initially
         references: {
-          model: 'Addresses', // Reference the Addresses table
-          key: 'id',
+          model: "Addresses", // Reference the Addresses table
+          key: "id",
         },
-        onDelete: 'SET NULL', // If the address is deleted, set this field to null
+        onDelete: "SET NULL", // If the address is deleted, set this field to null
       },
     },
     {
       sequelize,
-      modelName: 'Subscription',
+      modelName: "Subscription",
     }
   );
 
