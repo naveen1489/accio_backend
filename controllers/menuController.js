@@ -491,6 +491,24 @@ exports.addOrUpdateMenuReview = async (req, res) => {
         if (status) {
             menu.status = status;
             await menu.save();
+
+               // Create a notification for the admin
+        const user = await User.findOne({
+            where: { role: 'admin' },
+            attributes: ['id'], // Only get the 'id' field
+            order: [['createdAt', 'DESC']], // optional: most recent
+            limit: 1
+        });
+            
+            if (user) {
+                await Notification.create({
+                    ReceiverId: restaurantId,
+                    SenderId:  user.id,
+                    NotificationMessage: `"${restaurant.name}" BlinkDish has "${status}" the menu "${menuName}".`,
+                    NotificationType: 'New Menu Review',
+                    NotificationMetadata: { menuId: menu.id }
+                });
+            }
         }
 
         res.status(200).json({ message: 'Menu review updated successfully', menuReview, menu });
