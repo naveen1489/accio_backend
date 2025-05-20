@@ -135,8 +135,8 @@ exports.loginRestaurant = async (req, res) => {
       const { username } = req.body;
   
       // Generate a 6-digit random OTP
-      const otp = Math.floor(100000 + Math.random() * 900000).toString();
-  
+      //const otp = Math.floor(100000 + Math.random() * 900000).toString();
+      const otp = "123456"; // For testing purposes, use a fixed OTP
       // Set expiration time (90 seconds from now)
       const expiresAt = new Date(Date.now() + 90 * 1000);
   

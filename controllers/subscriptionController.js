@@ -50,6 +50,24 @@ exports.createSubscription = async (req, res) => {
       status: 'pending', // Default status
     });
 
+    const contactNumber = restaurant.contactNumber;
+    const restaurantUserID = await User.findOne({
+          where: { username: contactNumber },
+          attributes: ["id"], // Only get the 'id' field
+          order: [["createdAt", "DESC"]], // optional: most recent
+          limit: 1,
+        });
+
+    if (consumer) {
+      await Notification.create({
+        ReceiverId: restaurantUserID.id,
+        SenderId: consumer.userId,
+        NotificationMessage: `A new subscription has been requested by "${consumer.name}" for the menu "${menu.menuName}".`,
+        NotificationType: "Subscription Request",
+        NotificationMetadata: { subscriptionId: subscription.id },
+      });
+    }
+
     res.status(201).json({ message: 'Subscription created successfully', subscription });
   } catch (error) {
     console.error('Error creating subscription:', error);
