@@ -233,7 +233,7 @@ exports.updateSubscriptionStatus = async (req, res) => {
 
       while (currentDate <= new Date(endDate)) {
         // Add orders based on meal frequency
-        if (mealFrequency === 'daily' || (mealFrequency === 'alternate' && currentDate.getDate() % 2 === 0)) {
+       // if (mealFrequency === 'daily' || (mealFrequency === 'alternate' && currentDate.getDate() % 2 === 0)) {
           const orderNumber = Math.floor(1000000000000000 + Math.random() * 9000000000000000).toString(); // Generate random 16-digit number
           orders.push({
             subscriptionId: subscription.id,
@@ -245,7 +245,7 @@ exports.updateSubscriptionStatus = async (req, res) => {
             status: 'pending', // Default order status
             orderNumber, // Add the generated order number
           });
-        }
+      //  }
 
         // Increment the date by 1 day
         currentDate.setDate(currentDate.getDate() + 1);
