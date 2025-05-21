@@ -163,3 +163,94 @@ exports.getOrdersForDeliveryPartner = async (req, res) => {
       res.status(500).json({ message: 'Internal server error', error });
     }
   };
+
+  exports.getOrderAndRevenueStats = async (req, res) => {
+    try {
+      const userId = req.user.id; // Extract userId from JWT token
+  
+      // Fetch the restaurantId for the user
+      const restaurant = await Restaurant.findOne({ where: { userId } });
+      if (!restaurant) {
+        return res.status(404).json({ message: 'Restaurant not found for the user' });
+      }
+  
+      const restaurantId = restaurant.id;
+  
+      const today = new Date();
+      today.setHours(0, 0, 0, 0); // Start of today
+  
+      // Calculate the start of the week (Monday)
+      const dayOfWeek = today.getDay(); // 0 = Sunday, 1 = Monday, ..., 6 = Saturday
+      const daysSinceMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1; // Adjust for Sunday
+      const startOfWeek = new Date(today);
+      startOfWeek.setDate(today.getDate() - daysSinceMonday); // Go back to Monday
+      startOfWeek.setHours(0, 0, 0, 0); // Start of the week
+  
+      // Fetch total completed orders for today
+      const totalOrdersToday = await Order.count({
+        where: {
+          status: 'completed',
+          restaurantId,
+          orderDate: {
+            [Op.gte]: today,
+          },
+        },
+      });
+  
+      // Fetch total completed orders for the week so far
+      const totalOrdersWeek = await Order.count({
+        where: {
+          status: 'completed',
+          restaurantId,
+          orderDate: {
+            [Op.between]: [startOfWeek, today],
+          },
+        },
+      });
+  
+      // Fetch total revenue for today
+      const totalRevenueToday = await Subscription.sum('paymentAmount', {
+        where: {
+          paymentStatus: 'paid',
+          restaurantId,
+          updatedAt: {
+            [Op.gte]: today,
+          },
+        },
+      });
+  
+      // Fetch total revenue for the week so far
+      const totalRevenueWeek = await Subscription.sum('paymentAmount', {
+        where: {
+          paymentStatus: 'paid',
+          restaurantId,
+          updatedAt: {
+            [Op.between]: [startOfWeek, today],
+          },
+        },
+      });
+  
+      // Fetch total pending payments for approved subscriptions
+      const totalPendingPayments = await Subscription.sum('paymentAmount', {
+        where: {
+          paymentStatus: 'pending',
+          status: 'approved',
+          restaurantId,
+        },
+      });
+  
+      res.status(200).json({
+        message: 'Order and revenue stats fetched successfully',
+        stats: {
+          totalOrdersToday,
+          totalOrdersWeek,
+          totalRevenueToday: totalRevenueToday || 0,
+          totalRevenueWeek: totalRevenueWeek || 0,
+          totalPendingPayments: totalPendingPayments || 0,
+        },
+      });
+    } catch (error) {
+      console.error('Error fetching order and revenue stats:', error);
+      res.status(500).json({ message: 'Internal server error', error });
+    }
+  };

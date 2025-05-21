@@ -35,6 +35,21 @@ exports.addRestaurantPartner = async (req, res) => {
             return res.status(400).json({ message: 'Restaurant already exists' });
         }
 
+
+         // Generate a random 8-character password
+         const randomPassword = crypto.randomBytes(4).toString('hex'); // Generates an 8-character password
+
+         // Hash the password
+         const hashedPassword = await bcrypt.hash(randomPassword, 10); // Hash the password with a salt round of 10
+ 
+         // Create a user entry in the User table
+         const user = await User.create({
+             username: contactNumber, // Use the mobile number as the username
+             password: hashedPassword, // Store the hashed password
+             role: 'restaurant', // Assign the role as 'restaurant'
+             email: emailId
+         }, { transaction }); // Pass transaction
+
         // Create the restaurant
         const restaurant = await Restaurant.create({
             companyName,
@@ -53,20 +68,7 @@ exports.addRestaurantPartner = async (req, res) => {
             latitude,
             longitude,
             imageUrl,
-        }, { transaction }); // Pass transaction
-
-        // Generate a random 8-character password
-        const randomPassword = crypto.randomBytes(4).toString('hex'); // Generates an 8-character password
-
-        // Hash the password
-        const hashedPassword = await bcrypt.hash(randomPassword, 10); // Hash the password with a salt round of 10
-
-        // Create a user entry in the User table
-        const user = await User.create({
-            username: contactNumber, // Use the mobile number as the username
-            password: hashedPassword, // Store the hashed password
-            role: 'restaurant', // Assign the role as 'restaurant'
-            email: emailId
+            userId: user.id // Associate the restaurant with the user created
         }, { transaction }); // Pass transaction
 
         // Commit the transaction
