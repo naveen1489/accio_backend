@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const orderController = require('../controllers/orderController');
-
+const authMiddleware  = require('../middlewares/authMiddleware');
 /**
  * @swagger
  * tags:
@@ -143,4 +143,8 @@ router.get('/orders/delivery-partner/:deliveryPartnerId', orderController.getOrd
  */
 router.patch('/:orderId/status', orderController.updateOrderStatusByDeliveryPartner);
 
+
+
+
+router.get('/stats', authMiddleware, orderController.getOrderAndRevenueStats);
 module.exports = router;

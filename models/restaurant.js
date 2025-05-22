@@ -6,6 +6,7 @@ module.exports = (sequelize, DataTypes) => {
     class Restaurant extends Model {
         static associate(models) {
             // Define associations here if needed
+            Restaurant.belongsTo(models.User, { foreignKey: 'userId', as: 'user' }); // Association with User
         }
     }
 
@@ -81,6 +82,16 @@ module.exports = (sequelize, DataTypes) => {
         imageUrl: {
             type: DataTypes.TEXT, 
             allowNull: false,
+        },
+        userId: { // New column
+            type: DataTypes.UUID,
+            allowNull: true, // Initially allow null for backfilling
+            references: {
+                model: 'Users', // Reference the Users table
+                key: 'id',
+            },
+            onUpdate: 'CASCADE',
+            onDelete: 'SET NULL',
         }
     }, {
         sequelize,
