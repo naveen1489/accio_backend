@@ -118,6 +118,7 @@ exports.createMenu = async (req, res) => {
 
 // Update an existing menu
 exports.updateMenu = async (req, res) => {
+  console.log("Updating menu with body:", req.body);
   try {
     const { id } = req.params;
     const {
