@@ -129,6 +129,11 @@ exports.updateMenu = async (req, res) => {
       discount,
     } = req.body;
 
+    // Validate input data
+    if (!menuName || !price || !restaurantId) {
+      return res.status(400).json({ message: "Menu name, price, and restaurant ID are required" });
+    }
+
     // Find the menu
     const menu = await Menu.findByPk(id);
     if (!menu) {
@@ -143,22 +148,43 @@ exports.updateMenu = async (req, res) => {
 
     // Update menu categories and items
     if (menuCategories && menuCategories.length > 0) {
-      // Delete existing menu categories and items
-      await MenuCategory.destroy({ where: { menuId: id } });
-
       for (const menuCategory of menuCategories) {
-        const createdMenuCategory = await MenuCategory.create({
-          menuId: menu.id,
-          categoryName: menuCategory.categoryName,
-          day: menuCategory.day,
+        let category = await MenuCategory.findOne({
+          where: { menuId: id, categoryName: menuCategory.categoryName },
         });
 
+        if (category) {
+          // Update existing category
+          category.day = menuCategory.day || category.day;
+          await category.save();
+        } else {
+          // Create new category
+          category = await MenuCategory.create({
+            menuId: menu.id,
+            categoryName: menuCategory.categoryName,
+            day: menuCategory.day,
+          });
+        }
+
+        // Update or create menu items
         if (menuCategory.menuItems && menuCategory.menuItems.length > 0) {
           for (const menuItem of menuCategory.menuItems) {
-            await MenuItem.create({
-              menuCategoryId: createdMenuCategory.id,
-              itemName: menuItem.itemName,
+            let item = await MenuItem.findOne({
+              where: { menuCategoryId: category.id, itemName: menuItem.itemName },
             });
+
+            if (item) {
+              // Update existing item
+              item.itemCategory = menuItem.itemCategory || item.itemCategory;
+              await item.save();
+            } else {
+              // Create new item
+              await MenuItem.create({
+                menuCategoryId: category.id,
+                itemName: menuItem.itemName,
+                itemCategory: menuItem.itemCategory,
+              });
+            }
           }
         }
       }
@@ -178,6 +204,7 @@ exports.updateMenu = async (req, res) => {
 
       if (discountEnabled) {
         if (menuDiscount) {
+          // Update existing discount
           menuDiscount.discountEnabled = discountEnabled;
           menuDiscount.discountType = discountType;
           menuDiscount.discountValue = discountValue;
@@ -185,6 +212,7 @@ exports.updateMenu = async (req, res) => {
           menuDiscount.discountEndDate = discountEndDate;
           await menuDiscount.save();
         } else {
+          // Create new discount
           await Discount.create({
             menuId: menu.id,
             discountEnabled,
@@ -195,6 +223,7 @@ exports.updateMenu = async (req, res) => {
           });
         }
       } else if (menuDiscount) {
+        // Delete discount if disabled
         await menuDiscount.destroy();
       }
     }
@@ -216,8 +245,8 @@ exports.updateMenu = async (req, res) => {
       await Notification.create({
         ReceiverId: user.id,
         SenderId: restaurantId,
-        NotificationMessage: `A new menu "${menuName}" has been created by restaurant "${restaurant.name}".`,
-        NotificationType: "Menu Creation",
+        NotificationMessage: `The menu "${menuName}" has been updated by restaurant "${restaurant.name}".`,
+        NotificationType: "Menu Update",
         NotificationMetadata: { menuId: menu.id },
       });
     }
@@ -245,29 +274,6 @@ exports.updateMenu = async (req, res) => {
       .json({ message: "Menu updated successfully", menu: updatedMenu });
   } catch (error) {
     console.error("Error updating menu:", error);
-    res.status(500).json({ message: "Internal server error", error });
-  }
-};
-// Delete a menu
-exports.deleteMenu = async (req, res) => {
-  try {
-    const { id } = req.params;
-
-    // Find the menu
-    const menu = await Menu.findByPk(id);
-    if (!menu) {
-      return res.status(404).json({ message: "Menu not found" });
-    }
-
-    // Delete menu categories and items
-    await MenuCategory.destroy({ where: { menuId: id } });
-
-    // Delete the menu
-    await menu.destroy();
-
-    res.status(200).json({ message: "Menu deleted successfully" });
-  } catch (error) {
-    console.error("Error deleting menu:", error);
     res.status(500).json({ message: "Internal server error", error });
   }
 };
