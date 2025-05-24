@@ -11,10 +11,21 @@ const models = require('../models');
  */
 exports.addDeliveryPartner = async (req, res) => {
   try {
-    const { name, email, phone, restaurantId, status, workingHoursStart, workingHoursEnd } = req.body;
+    const { name, email, phone, status, workingHoursStart, workingHoursEnd } = req.body;
     if (!name || !email || !phone) {
       return res.status(400).json({ message: 'Name, email, and phone are required' });
     }
+
+// Extract userId from JWT token (assumes middleware sets req.user)
+const userId = req.user.id;
+
+// Fetch the restaurant associated with the userId
+const restaurant = await models.Restaurant.findOne({ where: { userId } });
+if (!restaurant) {
+  return res.status(404).json({ message: 'Restaurant not found for the user' });
+}
+
+const restaurantId = restaurant.id;
 
     // Check if a delivery partner with the same email or phone already exists
     const existingPartner = await models.DeliveryPartner.findOne({
