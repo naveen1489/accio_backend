@@ -5,10 +5,22 @@ const { Order, Menu, Subscription, DeliveryPartner, Restaurant, Consumer, Addres
 // Get orders with filters
 exports.getOrders = async (req, res) => {
   try {
+    // Extract userId from JWT token (assumes middleware sets req.user)
+    const userId = req.user.id;
+
+    // Fetch the restaurant associated with the userId
+    const restaurant = await Restaurant.findOne({ where: { userId } });
+    if (!restaurant) {
+      return res.status(404).json({ message: 'Restaurant not found for the user' });
+    }
+
+    const restaurantId = restaurant.id;
+
+    // Extract filters from query parameters
     const { categoryName, startDate, endDate, status, orderId } = req.query;
 
     // Build the filter conditions
-    const filters = {};
+    const filters = { restaurantId }; // Filter by restaurantId
 
     if (orderId) {
       filters.id = orderId; // Filter by order ID
@@ -64,7 +76,8 @@ exports.getOrders = async (req, res) => {
         },
         {
           model: Address,
-          as: 'address'        },
+          as: 'address', // Include address details
+        },
       ],
     });
 
