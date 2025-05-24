@@ -277,6 +277,29 @@ exports.updateMenu = async (req, res) => {
     res.status(500).json({ message: "Internal server error", error });
   }
 };
+// Delete a menu
+exports.deleteMenu = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // Find the menu
+    const menu = await Menu.findByPk(id);
+    if (!menu) {
+      return res.status(404).json({ message: "Menu not found" });
+    }
+
+    // Delete menu categories and items
+    await MenuCategory.destroy({ where: { menuId: id } });
+
+    // Delete the menu
+    await menu.destroy();
+
+    res.status(200).json({ message: "Menu deleted successfully" });
+  } catch (error) {
+    console.error("Error deleting menu:", error);
+    res.status(500).json({ message: "Internal server error", error });
+  }
+};
 
 // Get all menus by restaurant
 
