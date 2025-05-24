@@ -205,6 +205,24 @@ exports.getRestaurantById = async (req, res) => {
     }
 };
 
+exports.getRestaurantProfile = async (req, res) => {
+  try {
+    // Extract userId from JWT token (assumes middleware sets req.user)
+    const userId = req.user.id;
+
+    // Fetch the restaurant associated with the userId
+    const restaurant = await Restaurant.findOne({ where: { userId } });
+    if (!restaurant) {
+      return res.status(404).json({ message: 'Restaurant not found for the user' });
+    }
+
+    res.status(200).json(restaurant);
+  } catch (error) {
+    console.error('Error fetching restaurant profile:', error);
+    res.status(500).json({ message: 'Internal server error', error });
+  }
+};
+
 // Update Restaurant Partner
 exports.updateRestaurant = async (req, res) => {
     try {
