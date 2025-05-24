@@ -68,6 +68,8 @@ const authenticateToken = require('../middlewares/authMiddleware');
  */
 router.post('/add-partner', authenticateToken, restaurantController.addRestaurantPartner);
 
+router.get('/profile', authenticateToken, restaurantController.getRestaurantProfile);
+
 /**
  * @swagger
  * /api/restaurants:
@@ -334,8 +336,6 @@ router.delete('/delivery/:id', restaurantController.deleteDeliveryPartner);
  */
 router.get('/delivery/restaurant/:restaurantId', restaurantController.getDeliveryPartnersByRestaurantId);
 
-
-router.get('/profile', authenticateToken, restaurantController.getRestaurantProfile);
 
 
 module.exports = router;
