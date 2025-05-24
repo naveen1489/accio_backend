@@ -121,14 +121,7 @@ exports.updateMenu = async (req, res) => {
   console.log("Updating menu with body:", JSON.stringify(req.body, null, 2));
   try {
     const { id } = req.params;
-    const {
-      menuName,
-      vegNonVeg,
-      menuCategories,
-      price,
-      restaurantId,
-      discount,
-    } = req.body;
+    const { menuName, vegNonVeg, menuCategories, price, restaurantId, discount } = req.body;
 
     // Validate input data
     if (!menuName || !price || !restaurantId) {
@@ -147,37 +140,38 @@ exports.updateMenu = async (req, res) => {
     menu.price = price || menu.price;
     await menu.save();
 
-    // Update menu categories and items
+    // Update menu items for existing categories
     if (menuCategories && menuCategories.length > 0) {
       for (const menuCategory of menuCategories) {
-        let category = await MenuCategory.findOne({
+        // Find the existing category
+        const category = await MenuCategory.findOne({
           where: { menuId: id, categoryName: menuCategory.categoryName },
         });
 
-        if (category) {
-          // Update existing category
-          category.day = menuCategory.day || category.day;
-          await category.save();
-        } else {
-          // Create new category
-          category = await MenuCategory.create({
-            menuId: menu.id,
-            categoryName: menuCategory.categoryName,
-            day: menuCategory.day,
-          });
+        if (!category) {
+          console.warn(`Category "${menuCategory.categoryName}" does not exist and cannot be updated.`);
+          continue; // Skip this category if it doesn't exist
         }
 
-        // Update or create menu items
+        // Handle menu items for the category
         if (menuCategory.menuItems && menuCategory.menuItems.length > 0) {
-          for (const menuItem of menuCategory.menuItems) {
-            let item = await MenuItem.findOne({
-              where: { menuCategoryId: category.id, itemName: menuItem.itemName },
-            });
+          // Get all existing items for the category
+          const existingItems = await MenuItem.findAll({
+            where: { menuCategoryId: category.id },
+          });
 
-            if (item) {
+          // Map existing items by name for easy lookup
+          const existingItemsMap = new Map(
+            existingItems.map((item) => [item.itemName, item])
+          );
+
+          for (const menuItem of menuCategory.menuItems) {
+            if (existingItemsMap.has(menuItem.itemName)) {
               // Update existing item
+              const item = existingItemsMap.get(menuItem.itemName);
               item.itemCategory = menuItem.itemCategory || item.itemCategory;
               await item.save();
+              existingItemsMap.delete(menuItem.itemName); // Remove from map after updating
             } else {
               // Create new item
               await MenuItem.create({
@@ -186,6 +180,11 @@ exports.updateMenu = async (req, res) => {
                 itemCategory: menuItem.itemCategory,
               });
             }
+          }
+
+          // Delete remaining items in the map (items not in the new list)
+          for (const item of existingItemsMap.values()) {
+            await item.destroy();
           }
         }
       }
