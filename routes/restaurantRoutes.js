@@ -334,4 +334,8 @@ router.delete('/delivery/:id', restaurantController.deleteDeliveryPartner);
  */
 router.get('/delivery/restaurant/:restaurantId', restaurantController.getDeliveryPartnersByRestaurantId);
 
+
+router.get('/profile', authenticateToken, restaurantController.getRestaurantProfile);
+
+
 module.exports = router;
