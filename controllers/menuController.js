@@ -294,6 +294,10 @@ exports.getMenusByRestaurant = async (req, res) => {
           model: Restaurant,
           as: "restaurant", // Include restaurant data
         },
+        {
+          model: Discount,
+          as: "discount", // Include discount data
+        },
       ],
     });
 
@@ -366,6 +370,7 @@ exports.getMenuById = async (req, res) => {
   try {
     const { id } = req.params;
 
+    // Fetch the menu by ID
     const menu = await Menu.findByPk(id, {
       include: [
         {
@@ -379,6 +384,10 @@ exports.getMenuById = async (req, res) => {
         {
           model: Restaurant,
           as: "restaurant", // Include restaurant data
+        },
+        {
+          model: Discount,
+          as: "discount", // Include discount data
         },
       ],
     });

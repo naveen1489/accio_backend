@@ -12,7 +12,7 @@ const models = require('../models');
 exports.addDeliveryPartner = async (req, res) => {
   try {
     const { name, email, phone, status, workingHoursStart, workingHoursEnd } = req.body;
-    if (!name || !email || !phone) {
+    if (!name || !phone) {
       return res.status(400).json({ message: 'Name, email, and phone are required' });
     }
 
