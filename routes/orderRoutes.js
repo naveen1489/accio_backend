@@ -49,7 +49,7 @@ const authMiddleware  = require('../middlewares/authMiddleware');
  *       500:
  *         description: Internal server error
  */
-router.get('/', orderController.getOrders);
+router.get('/',authMiddleware, orderController.getOrders);
 
 /**
  * @swagger
