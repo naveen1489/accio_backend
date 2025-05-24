@@ -209,7 +209,7 @@ exports.getRestaurantProfile = async (req, res) => {
   try {
     // Extract userId from JWT token (assumes middleware sets req.user)
     const userId = req.user.id;
-
+    console.log('User ID from token:', userId);
     // Fetch the restaurant associated with the userId
     const restaurant = await Restaurant.findOne({ where: { userId } });
     if (!restaurant) {
