@@ -133,6 +133,12 @@ exports.loginRestaurant = async (req, res) => {
   exports.sendOtp = async (req, res) => {
     try {
       const { username } = req.body;
+
+        // Check if the username exists in the User table
+    const user = await User.findOne({ where: { username } });
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
   
       // Generate a 6-digit random OTP
       //const otp = Math.floor(100000 + Math.random() * 900000).toString();
