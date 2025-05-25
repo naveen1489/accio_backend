@@ -140,8 +140,19 @@ exports.loginRestaurant = async (req, res) => {
       // Set expiration time (90 seconds from now)
       const expiresAt = new Date(Date.now() + 90 * 1000);
   
-      // Save the OTP in the database
-      await OTP.create({ username, otp, expiresAt });
+ // Check if an OTP record already exists for the username
+ const existingOtp = await OTP.findOne({ where: { username } });
+
+
+ if (existingOtp) {
+  // Update the existing OTP record
+  existingOtp.otp = otp;
+  existingOtp.expiresAt = expiresAt;
+  await existingOtp.save();
+} else {
+  // Create a new OTP record
+  await OTP.create({ username, otp, expiresAt });
+}
   
       // Generate a JWT token with OTP pending verification
       const token = jwt.sign(
