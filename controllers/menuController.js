@@ -138,6 +138,10 @@ exports.updateMenu = async (req, res) => {
     menu.menuName = menuName || menu.menuName;
     menu.vegNonVeg = vegNonVeg || menu.vegNonVeg;
     menu.price = price || menu.price;
+
+    // Set status to "Pending"
+    menu.status = "Pending";
+    
     await menu.save();
 
     // Update menu items for existing categories
