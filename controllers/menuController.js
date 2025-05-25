@@ -166,12 +166,16 @@ exports.updateMenu = async (req, res) => {
           );
 
           for (const menuItem of menuCategory.menuItems) {
-            if (existingItemsMap.has(menuItem.itemName)) {
-              // Update existing item
-              const item = existingItemsMap.get(menuItem.itemName);
-              item.itemCategory = menuItem.itemCategory || item.itemCategory;
-              await item.save();
-              existingItemsMap.delete(menuItem.itemName); // Remove from map after updating
+            if (menuItem.id) {
+              // Update existing item by ID
+              const existingItem = await MenuItem.findByPk(menuItem.id);
+              if (existingItem) {
+                existingItem.itemCategory = menuItem.itemCategory || existingItem.itemCategory;
+                existingItem.itemName = menuItem.itemName || existingItem.itemName;
+                await existingItem.save();
+              } else {
+                console.warn(`MenuItem with ID "${menuItem.id}" not found.`);
+              }
             } else {
               // Create new item
               await MenuItem.create({
@@ -180,11 +184,6 @@ exports.updateMenu = async (req, res) => {
                 itemCategory: menuItem.itemCategory,
               });
             }
-          }
-
-          // Delete remaining items in the map (items not in the new list)
-          for (const item of existingItemsMap.values()) {
-            await item.destroy();
           }
         }
       }
