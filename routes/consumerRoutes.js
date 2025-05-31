@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const consumerController = require('../controllers/consumerController');
-const authenticate = require('../middleware/authenticate'); // JWT authentication middleware
+const authenticate = require('../middleware/authMiddleware'); // JWT authentication middleware
 
 /**
  * @swagger
@@ -258,6 +258,56 @@ router.post('/address/create', consumerController.createAddress);
 router.patch('/address/update-current', consumerController.updateCurrentAddress);
 
 
-router.get('/consumers/:consumerId/addresses', getAddressesByConsumerId); // New route
+/**
+ * @swagger
+ * /api/consumers/addresses:
+ *   get:
+ *     summary: Get all addresses for the authenticated consumer
+ *     tags: [Consumers]
+ *     security:
+ *       - bearerAuth: []  // Indicate that this route requires a Bearer token
+ *     responses:
+ *       200:
+ *         description: Addresses fetched successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 addresses:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       id:
+ *                         type: string
+ *                       consumerId:
+ *                         type: string
+ *                       addressTag:
+ *                         type: string
+ *                       addressLine1:
+ *                         type: string
+ *                       addressLine2:
+ *                         type: string
+ *                       city:
+ *                         type: string
+ *                       state:
+ *                         type: string
+ *                       pincode:
+ *                         type: string
+ *                       mobile:
+ *                         type: string
+ *                       latitude:
+ *                         type: string
+ *                       longitude:
+ *                         type: string
+ *       401:
+ *         description: Unauthorized (missing or invalid token)
+ *       404:
+ *         description: No addresses found for this consumer
+ *       500:
+ *         description: Internal server error
+ */
+router.get('/consumers/addresses', authenticate, consumerController.getAddressesByConsumerId);
 
 module.exports = router;
