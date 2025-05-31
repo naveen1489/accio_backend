@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const consumerController = require('../controllers/consumerController');
-const authenticate = require('../middleware/authMiddleware'); // JWT authentication middleware
+const authenticateToken = require('../middlewares/authMiddleware');
 
 /**
  * @swagger
@@ -260,12 +260,12 @@ router.patch('/address/update-current', consumerController.updateCurrentAddress)
 
 /**
  * @swagger
- * /api/consumers/addresses:
+ * /api/consumers/addresses/get:
  *   get:
  *     summary: Get all addresses for the authenticated consumer
  *     tags: [Consumers]
  *     security:
- *       - bearerAuth: []  // Indicate that this route requires a Bearer token
+ *       - bearerAuth: []  # Indicate that this route requires a Bearer token
  *     responses:
  *       200:
  *         description: Addresses fetched successfully
@@ -308,6 +308,6 @@ router.patch('/address/update-current', consumerController.updateCurrentAddress)
  *       500:
  *         description: Internal server error
  */
-router.get('/consumers/addresses', authenticate, consumerController.getAddressesByConsumerId);
+router.get('/addresses/get', authenticateToken, consumerController.getAddressesByConsumerId);
 
 module.exports = router;

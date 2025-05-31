@@ -206,8 +206,10 @@ exports.createAddress = async (req, res) => {
 // Get Addresses by Consumer ID
 exports.getAddressesByConsumerId = async (req, res) => {
   try {
+    console.log('Got Request for get Addresses by Consumer ID'); 
     // Extract consumerId from the decoded JWT (req.user)
     const consumerId = req.user.id;
+    console.log('consumerId:', consumerId); 
 
     // Fetch addresses for the consumer
     const addresses = await Address.findAll({ where: { consumerId } });
