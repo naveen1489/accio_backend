@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const consumerController = require('../controllers/consumerController');
+const authenticate = require('../middleware/authenticate'); // JWT authentication middleware
 
 /**
  * @swagger
@@ -255,5 +256,8 @@ router.post('/address/create', consumerController.createAddress);
  *         description: Internal server error
  */
 router.patch('/address/update-current', consumerController.updateCurrentAddress);
+
+
+router.get('/consumers/:consumerId/addresses', getAddressesByConsumerId); // New route
 
 module.exports = router;
