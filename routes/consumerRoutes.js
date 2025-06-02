@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const consumerController = require('../controllers/consumerController');
+const authenticateToken = require('../middlewares/authMiddleware');
 
 /**
  * @swagger
@@ -80,7 +81,7 @@ router.post('/login', consumerController.loginConsumer);
 
 /**
  * @swagger
- * /api/consumers/update/{id}:
+ * /api/consumers/update:
  *   put:
  *     summary: Update a consumer
  *     tags: [Consumers]
@@ -116,7 +117,7 @@ router.post('/login', consumerController.loginConsumer);
  *       500:
  *         description: Internal server error
  */
-router.put('/update/:id', consumerController.updateConsumer);
+router.put('/update', authenticateToken, consumerController.updateConsumer);
 
 /**
  * @swagger
@@ -162,21 +163,8 @@ router.delete('/delete/:id', consumerController.deleteConsumer);
  *       500:
  *         description: Internal server error
  */
-router.get('/:id', consumerController.getConsumerById);
+router.get('/', authenticateToken, consumerController.getConsumerById);
 
-/**
- * @swagger
- * /api/consumers:
- *   get:
- *     summary: Get all consumers
- *     tags: [Consumers]
- *     responses:
- *       200:
- *         description: Consumers fetched successfully
- *       500:
- *         description: Internal server error
- */
-router.get('/', consumerController.getAllConsumers);
 
 /**
  * @swagger
@@ -224,7 +212,7 @@ router.get('/', consumerController.getAllConsumers);
  *       500:
  *         description: Internal server error
  */
-router.post('/address/create', consumerController.createAddress);
+router.post('/address/create', authenticateToken, consumerController.createAddress);
 
 /**
  * @swagger
@@ -254,6 +242,59 @@ router.post('/address/create', consumerController.createAddress);
  *       500:
  *         description: Internal server error
  */
-router.patch('/address/update-current', consumerController.updateCurrentAddress);
+router.patch('/address/update-current',authenticateToken, consumerController.updateCurrentAddress);
+
+
+/**
+ * @swagger
+ * /api/consumers/addresses/get:
+ *   get:
+ *     summary: Get all addresses for the authenticated consumer
+ *     tags: [Consumers]
+ *     security:
+ *       - bearerAuth: []  # Indicate that this route requires a Bearer token
+ *     responses:
+ *       200:
+ *         description: Addresses fetched successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 addresses:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       id:
+ *                         type: string
+ *                       consumerId:
+ *                         type: string
+ *                       addressTag:
+ *                         type: string
+ *                       addressLine1:
+ *                         type: string
+ *                       addressLine2:
+ *                         type: string
+ *                       city:
+ *                         type: string
+ *                       state:
+ *                         type: string
+ *                       pincode:
+ *                         type: string
+ *                       mobile:
+ *                         type: string
+ *                       latitude:
+ *                         type: string
+ *                       longitude:
+ *                         type: string
+ *       401:
+ *         description: Unauthorized (missing or invalid token)
+ *       404:
+ *         description: No addresses found for this consumer
+ *       500:
+ *         description: Internal server error
+ */
+router.get('/addresses/get', authenticateToken, consumerController.getAddressesByConsumerId);
 
 module.exports = router;

@@ -118,16 +118,15 @@ exports.createMenu = async (req, res) => {
 
 // Update an existing menu
 exports.updateMenu = async (req, res) => {
+  console.log("Updating menu with body:", JSON.stringify(req.body, null, 2));
   try {
     const { id } = req.params;
-    const {
-      menuName,
-      vegNonVeg,
-      menuCategories,
-      price,
-      restaurantId,
-      discount,
-    } = req.body;
+    const { menuName, vegNonVeg, menuCategories, price, restaurantId, discount } = req.body;
+
+    // Validate input data
+    if (!menuName || !price || !restaurantId) {
+      return res.status(400).json({ message: "Menu name, price, and restaurant ID are required" });
+    }
 
     // Find the menu
     const menu = await Menu.findByPk(id);
@@ -139,26 +138,56 @@ exports.updateMenu = async (req, res) => {
     menu.menuName = menuName || menu.menuName;
     menu.vegNonVeg = vegNonVeg || menu.vegNonVeg;
     menu.price = price || menu.price;
+
+    // Set status to "Pending"
+    menu.status = "Pending";
+    
     await menu.save();
 
-    // Update menu categories and items
+    // Update menu items for existing categories
     if (menuCategories && menuCategories.length > 0) {
-      // Delete existing menu categories and items
-      await MenuCategory.destroy({ where: { menuId: id } });
-
       for (const menuCategory of menuCategories) {
-        const createdMenuCategory = await MenuCategory.create({
-          menuId: menu.id,
-          categoryName: menuCategory.categoryName,
-          day: menuCategory.day,
+        // Find the existing category
+        const category = await MenuCategory.findOne({
+          where: { menuId: id, categoryName: menuCategory.categoryName },
         });
 
+        if (!category) {
+          console.warn(`Category "${menuCategory.categoryName}" does not exist and cannot be updated.`);
+          continue; // Skip this category if it doesn't exist
+        }
+
+        // Handle menu items for the category
         if (menuCategory.menuItems && menuCategory.menuItems.length > 0) {
+          // Get all existing items for the category
+          const existingItems = await MenuItem.findAll({
+            where: { menuCategoryId: category.id },
+          });
+
+          // Map existing items by name for easy lookup
+          const existingItemsMap = new Map(
+            existingItems.map((item) => [item.itemName, item])
+          );
+
           for (const menuItem of menuCategory.menuItems) {
-            await MenuItem.create({
-              menuCategoryId: createdMenuCategory.id,
-              itemName: menuItem.itemName,
-            });
+            if (menuItem.id) {
+              // Update existing item by ID
+              const existingItem = await MenuItem.findByPk(menuItem.id);
+              if (existingItem) {
+                existingItem.itemCategory = menuItem.itemCategory || existingItem.itemCategory;
+                existingItem.itemName = menuItem.itemName || existingItem.itemName;
+                await existingItem.save();
+              } else {
+                console.warn(`MenuItem with ID "${menuItem.id}" not found.`);
+              }
+            } else {
+              // Create new item
+              await MenuItem.create({
+                menuCategoryId: category.id,
+                itemName: menuItem.itemName,
+                itemCategory: menuItem.itemCategory,
+              });
+            }
           }
         }
       }
@@ -178,6 +207,7 @@ exports.updateMenu = async (req, res) => {
 
       if (discountEnabled) {
         if (menuDiscount) {
+          // Update existing discount
           menuDiscount.discountEnabled = discountEnabled;
           menuDiscount.discountType = discountType;
           menuDiscount.discountValue = discountValue;
@@ -185,6 +215,7 @@ exports.updateMenu = async (req, res) => {
           menuDiscount.discountEndDate = discountEndDate;
           await menuDiscount.save();
         } else {
+          // Create new discount
           await Discount.create({
             menuId: menu.id,
             discountEnabled,
@@ -195,6 +226,7 @@ exports.updateMenu = async (req, res) => {
           });
         }
       } else if (menuDiscount) {
+        // Delete discount if disabled
         await menuDiscount.destroy();
       }
     }
@@ -216,8 +248,8 @@ exports.updateMenu = async (req, res) => {
       await Notification.create({
         ReceiverId: user.id,
         SenderId: restaurantId,
-        NotificationMessage: `A new menu "${menuName}" has been created by restaurant "${restaurant.name}".`,
-        NotificationType: "Menu Creation",
+        NotificationMessage: `The menu "${menuName}" has been updated by restaurant "${restaurant.name}".`,
+        NotificationType: "Menu Update",
         NotificationMetadata: { menuId: menu.id },
       });
     }
@@ -294,6 +326,10 @@ exports.getMenusByRestaurant = async (req, res) => {
           model: Restaurant,
           as: "restaurant", // Include restaurant data
         },
+        {
+          model: Discount,
+          as: "discount", // Include discount data
+        },
       ],
     });
 
@@ -366,6 +402,7 @@ exports.getMenuById = async (req, res) => {
   try {
     const { id } = req.params;
 
+    // Fetch the menu by ID
     const menu = await Menu.findByPk(id, {
       include: [
         {
@@ -379,6 +416,10 @@ exports.getMenuById = async (req, res) => {
         {
           model: Restaurant,
           as: "restaurant", // Include restaurant data
+        },
+        {
+          model: Discount,
+          as: "discount", // Include discount data
         },
       ],
     });

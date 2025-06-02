@@ -19,6 +19,9 @@
       "database": "your_db_name",
       "host": "your_production_host",
       "dialect": "mysql"
-    }
+    },
+    "jest": {
+  "testEnvironment": "node"
+}
   }
   

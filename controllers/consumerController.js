@@ -78,7 +78,7 @@ exports.loginConsumer = async (req, res) => {
 // Update consumer
 exports.updateConsumer = async (req, res) => {
   try {
-    const { id } = req.params; // Consumer ID
+    const id = req.user.id;
     const { name, mobile, email, profilePic, status } = req.body;
 
     // Find the consumer by ID
@@ -131,7 +131,7 @@ exports.deleteConsumer = async (req, res) => {
 // Get consumer by ID
 exports.getConsumerById = async (req, res) => {
   try {
-    const { id } = req.params; // Consumer ID
+    const id = req.user.id;
 
     // Find the consumer by ID
     const consumer = await Consumer.findByPk(id, {
@@ -148,27 +148,14 @@ exports.getConsumerById = async (req, res) => {
   }
 };
 
-// Get all consumers
-exports.getAllConsumers = async (req, res) => {
-  try {
-    // Find all consumers
-    const consumers = await Consumer.findAll({
-      include: [{ model: User, as: 'user' }],
-    });
-
-    res.status(200).json({ consumers });
-  } catch (error) {
-    console.error('Error fetching consumers:', error);
-    res.status(500).json({ message: 'Internal server error', error });
-  }
-};
 
 
 // Create Address
 exports.createAddress = async (req, res) => {
   try {
-    const { consumerId, addressTag, name, addressLine1, addressLine2, city, state, pincode, mobile, latitude, longitude } = req.body;
+    const {addressTag, name, addressLine1, addressLine2, city, state, pincode, mobile, latitude, longitude } = req.body;
 
+    const consumerId = req.user.id;
     // Check if the consumer exists
     const consumer = await Consumer.findByPk(consumerId);
     if (!consumer) {
@@ -206,10 +193,17 @@ exports.createAddress = async (req, res) => {
 // Get Addresses by Consumer ID
 exports.getAddressesByConsumerId = async (req, res) => {
   try {
-    const { consumerId } = req.params;
+    console.log('Got Request for get Addresses by Consumer ID'); 
+    // Extract consumerId from the decoded JWT (req.user)
+    const consumerId = req.user.id;
+    console.log('consumerId:', consumerId); 
 
-    // Find all addresses for the given consumer
+    // Fetch addresses for the consumer
     const addresses = await Address.findAll({ where: { consumerId } });
+
+    if (!addresses || addresses.length === 0) {
+      return res.status(404).json({ message: 'No addresses found for this consumer' });
+    }
 
     res.status(200).json({ addresses });
   } catch (error) {
@@ -221,7 +215,7 @@ exports.getAddressesByConsumerId = async (req, res) => {
 // Update Address
 exports.updateAddress = async (req, res) => {
   try {
-    const { id } = req.params;
+    const  id  = req.user.id;
     const { addressTag, name, addressLine1, addressLine2, city, state, pincode, mobile, latitude, longitude } = req.body;
 
     // Find the address by ID
@@ -272,7 +266,8 @@ exports.deleteAddress = async (req, res) => {
 };
 exports.updateCurrentAddress = async (req, res) => {
   try {
-    const { consumerId, addressId } = req.body;
+   const consumerId = req.user.id; // Get the consumer ID from the authenticated user
+    const { addressId } = req.body;
 
     // Check if the consumer exists
     const consumer = await Consumer.findByPk(consumerId);

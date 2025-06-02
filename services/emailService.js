@@ -13,6 +13,8 @@ const transporter = nodemailer.createTransport({
 // Verify the connection configuration
 transporter.verify((error, success) => {
   if (error) {
+    console.log('EMAIL_USERNAME:', process.env.EMAIL_USERNAME);
+console.log('EMAIL_PASSWORD:', process.env.EMAIL_PASSWORD);
     console.error('Error configuring Nodemailer:', error);
   } else {
     console.log('Nodemailer is configured and ready to send emails');

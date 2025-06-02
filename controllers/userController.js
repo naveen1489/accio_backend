@@ -133,6 +133,12 @@ exports.loginRestaurant = async (req, res) => {
   exports.sendOtp = async (req, res) => {
     try {
       const { username } = req.body;
+
+        // Check if the username exists in the User table
+    const user = await User.findOne({ where: { username } });
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
   
       // Generate a 6-digit random OTP
       //const otp = Math.floor(100000 + Math.random() * 900000).toString();
@@ -140,8 +146,19 @@ exports.loginRestaurant = async (req, res) => {
       // Set expiration time (90 seconds from now)
       const expiresAt = new Date(Date.now() + 90 * 1000);
   
-      // Save the OTP in the database
-      await OTP.create({ username, otp, expiresAt });
+ // Check if an OTP record already exists for the username
+ const existingOtp = await OTP.findOne({ where: { username } });
+
+
+ if (existingOtp) {
+  // Update the existing OTP record
+  existingOtp.otp = otp;
+  existingOtp.expiresAt = expiresAt;
+  await existingOtp.save();
+} else {
+  // Create a new OTP record
+  await OTP.create({ username, otp, expiresAt });
+}
   
       // Generate a JWT token with OTP pending verification
       const token = jwt.sign(

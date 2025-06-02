@@ -11,10 +11,21 @@ const models = require('../models');
  */
 exports.addDeliveryPartner = async (req, res) => {
   try {
-    const { name, email, phone, restaurantId, status, workingHoursStart, workingHoursEnd } = req.body;
-    if (!name || !email || !phone) {
+    const { name, email, phone, status, workingHoursStart, workingHoursEnd } = req.body;
+    if (!name || !phone) {
       return res.status(400).json({ message: 'Name, email, and phone are required' });
     }
+
+// Extract userId from JWT token (assumes middleware sets req.user)
+const userId = req.user.id;
+
+// Fetch the restaurant associated with the userId
+const restaurant = await models.Restaurant.findOne({ where: { userId } });
+if (!restaurant) {
+  return res.status(404).json({ message: 'Restaurant not found for the user' });
+}
+
+const restaurantId = restaurant.id;
 
     // Check if a delivery partner with the same email or phone already exists
     const existingPartner = await models.DeliveryPartner.findOne({
@@ -144,7 +155,22 @@ exports.completeDelivery = async (req, res) => {
  */
 exports.getAllDeliveryPartners = async (req, res) => {
   try {
-    const deliveryPartners = await models.DeliveryPartner.findAll(); 
+    // Extract userId from JWT token (assumes middleware sets req.user)
+    const userId = req.user.id;
+
+    // Fetch the restaurant associated with the userId
+    const restaurant = await models.Restaurant.findOne({ where: { userId } });
+    if (!restaurant) {
+      return res.status(404).json({ message: 'Restaurant not found for the user' });
+    }
+
+    const restaurantId = restaurant.id;
+
+    // Fetch all delivery partners for the restaurant
+    const deliveryPartners = await models.DeliveryPartner.findAll({
+      where: { restaurantId },
+    });
+
     res.status(200).json({ deliveryPartners });
   } catch (error) {
     console.error('Error fetching delivery partners:', error);

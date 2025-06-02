@@ -1,6 +1,69 @@
 'use strict';
 
-const { Subscription, Order, Restaurant, Menu, User , Consumer, Address, Notification} = require('../models');
+const { Subscription, Order, Restaurant, Menu, User , Consumer, Address, Notification,  Discount} = require('../models');
+
+
+const mealPlanConfig = {
+  '1 Week': 7,
+  '2 Week': 14,
+  '3 Week': 21,
+  '4 Week': 28,
+};
+
+const mealFrequencyConfig = {
+  'Mon-Fri': [1, 2, 3, 4, 5], // Monday to Friday
+  'Mon-Sat': [1, 2, 3, 4, 5, 6], // Monday to Saturday
+  'Mon-Sun': [0, 1, 2, 3, 4, 5, 6], // All days of the week
+};
+
+const calculateNumberOfOrders = (mealPlan, mealFrequency) => {
+  // Get the total number of days from the meal plan
+  const totalDays = mealPlanConfig[mealPlan];
+  if (!totalDays) {
+    throw new Error(`Invalid meal plan: ${mealPlan}`);
+  }
+
+  // Get the allowed days of the week from the meal frequency
+  const allowedDays = mealFrequencyConfig[mealFrequency];
+  if (!allowedDays) {
+    throw new Error(`Invalid meal frequency: ${mealFrequency}`);
+  }
+
+  // Calculate the number of orders
+  let numberOfOrders = 0;
+  const currentDate = new Date();
+
+  for (let i = 0; i < totalDays; i++) {
+    const dayOfWeek = currentDate.getDay(); // Get the day of the week (0 = Sunday, 1 = Monday, ..., 6 = Saturday)
+    if (allowedDays.includes(dayOfWeek)) {
+      numberOfOrders++;
+    }
+    currentDate.setDate(currentDate.getDate() + 1); // Move to the next day
+  }
+
+  return numberOfOrders;
+};
+
+
+const calculateAdjustedMenuPrice = (menuPrice, discount) => {
+  if (!discount || !discount.discountEnabled) {
+    return menuPrice; // No discount applied
+  }
+
+  const { discountType, discountValue } = discount;
+
+  if (discountType === 'amount') {
+    return Math.max(menuPrice - discountValue, 0); // Ensure price doesn't go below 0
+  } else if (discountType === 'percentage') {
+    return Math.max(menuPrice - (menuPrice * discountValue) / 100, 0); // Ensure price doesn't go below 0
+  }
+
+  return menuPrice; // Default to original price if discount type is invalid
+};
+
+const calculatePaymentAmount = (numberOfOrders, adjustedMenuPrice) => {
+  return numberOfOrders * adjustedMenuPrice;
+};
 
 exports.createSubscription = async (req, res) => {
   try {
@@ -22,19 +85,32 @@ exports.createSubscription = async (req, res) => {
     }
 
     // Check if the menu exists
-    const menu = await Menu.findByPk(menuId);
+    const menu = await Menu.findByPk(menuId, {
+      include: {
+        model: Discount,
+        as: 'discount', // Include discount data
+      },
+    });
     if (!menu) {
       return res.status(404).json({ message: 'Menu not found' });
     }
 
-     // Fetch the currentAddressId from the Consumer table
-     const consumer = await Consumer.findByPk(consumerId);
-     if (!consumer) {
-       return res.status(404).json({ message: 'Consumer not found' });
-     }
- 
-     const addressId = consumer.currentAddressId; // Get the current address ID from the Consumer
- 
+    // Fetch the currentAddressId from the Consumer table
+    const consumer = await Consumer.findByPk(consumerId);
+    if (!consumer) {
+      return res.status(404).json({ message: 'Consumer not found' });
+    }
+
+    const addressId = consumer.currentAddressId; // Get the current address ID from the Consumer
+
+    // Calculate the number of orders
+    const numberOfOrders = calculateNumberOfOrders(mealPlan, mealFrequency, startDate, endDate);
+
+    // Calculate the adjusted menu price
+    const adjustedMenuPrice = calculateAdjustedMenuPrice(menu.price, menu.discount);
+
+    // Calculate the payment amount
+    const paymentAmount = calculatePaymentAmount(numberOfOrders, adjustedMenuPrice);
 
     // Create the subscription
     const subscription = await Subscription.create({
@@ -47,23 +123,23 @@ exports.createSubscription = async (req, res) => {
       startDate,
       endDate,
       addressId,
+      paymentAmount, // Set the calculated payment amount
       status: 'pending', // Default status
     });
 
+    // Notify the restaurant
     const contactNumber = restaurant.contactNumber;
-    const restaurantUserID = await User.findOne({
-          where: { username: contactNumber },
-          attributes: ["id"], // Only get the 'id' field
-          order: [["createdAt", "DESC"]], // optional: most recent
-          limit: 1,
-        });
+    const restaurantUser = await User.findOne({
+      where: { username: contactNumber },
+      attributes: ['id'], // Only get the 'id' field
+    });
 
     if (consumer) {
       await Notification.create({
-        ReceiverId: restaurantUserID.id,
+        ReceiverId: restaurantUser.id,
         SenderId: consumer.userId,
         NotificationMessage: `A new subscription has been requested by "${consumer.name}" for the menu "${menu.menuName}".`,
-        NotificationType: "Subscription Request",
+        NotificationType: 'Subscription Request',
         NotificationMetadata: { subscriptionId: subscription.id },
       });
     }
@@ -74,6 +150,7 @@ exports.createSubscription = async (req, res) => {
     res.status(500).json({ message: 'Internal server error', error });
   }
 };
+
 exports.updateSubscription = async (req, res) => {
   try {
     const { id } = req.params;
