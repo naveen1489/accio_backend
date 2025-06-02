@@ -81,7 +81,7 @@ router.post('/login', consumerController.loginConsumer);
 
 /**
  * @swagger
- * /api/consumers/update/{id}:
+ * /api/consumers/update:
  *   put:
  *     summary: Update a consumer
  *     tags: [Consumers]
@@ -117,7 +117,7 @@ router.post('/login', consumerController.loginConsumer);
  *       500:
  *         description: Internal server error
  */
-router.put('/update/:id', consumerController.updateConsumer);
+router.put('/update', authenticateToken, consumerController.updateConsumer);
 
 /**
  * @swagger
@@ -163,21 +163,8 @@ router.delete('/delete/:id', consumerController.deleteConsumer);
  *       500:
  *         description: Internal server error
  */
-router.get('/:id', consumerController.getConsumerById);
+router.get('/', authenticateToken, consumerController.getConsumerById);
 
-/**
- * @swagger
- * /api/consumers:
- *   get:
- *     summary: Get all consumers
- *     tags: [Consumers]
- *     responses:
- *       200:
- *         description: Consumers fetched successfully
- *       500:
- *         description: Internal server error
- */
-router.get('/', consumerController.getAllConsumers);
 
 /**
  * @swagger
@@ -225,7 +212,7 @@ router.get('/', consumerController.getAllConsumers);
  *       500:
  *         description: Internal server error
  */
-router.post('/address/create', consumerController.createAddress);
+router.post('/address/create', authenticateToken, consumerController.createAddress);
 
 /**
  * @swagger
@@ -255,7 +242,7 @@ router.post('/address/create', consumerController.createAddress);
  *       500:
  *         description: Internal server error
  */
-router.patch('/address/update-current', consumerController.updateCurrentAddress);
+router.patch('/address/update-current',authenticateToken, consumerController.updateCurrentAddress);
 
 
 /**
