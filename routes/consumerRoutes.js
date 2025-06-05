@@ -296,5 +296,7 @@ router.patch('/address/update-current',authenticateToken, consumerController.upd
  *         description: Internal server error
  */
 router.get('/addresses/get', authenticateToken, consumerController.getAddressesByConsumerId);
+router.patch('/address/update/:id', authenticateToken, consumerController.updateAddress);
+router.delete('/address/delete/:id', authenticateToken, consumerController.deleteAddress);
 
 module.exports = router;
