@@ -202,7 +202,7 @@ router.get('/restaurant/:restaurantId', subscriptionController.getSubscriptionsB
 
 /**
  * @swagger
- * /api/subscriptions/user/{userId}:
+ * /api/subscriptions/user:
  *   get:
  *     summary: Get subscriptions by user ID
  *     tags: [Subscriptions]
