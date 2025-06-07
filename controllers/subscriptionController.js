@@ -233,7 +233,7 @@ exports.getSubscriptionsByRestaurantId = async (req, res) => {
 };
 exports.getSubscriptionsByUserId = async (req, res) => {
   try {
-    const { userId } = req.params;
+    const  userId = req.user.id;
 
     // Find subscriptions by userId
     const subscriptions = await Subscription.findAll({

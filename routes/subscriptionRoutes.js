@@ -219,7 +219,7 @@ router.get('/restaurant/:restaurantId', subscriptionController.getSubscriptionsB
  *       500:
  *         description: Internal server error
  */
-router.get('/user/:userId', subscriptionController.getSubscriptionsByUserId);
+router.get('/user',authenticateToken, subscriptionController.getSubscriptionsByUserId);
 
 /**
  * @swagger
