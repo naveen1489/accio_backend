@@ -78,11 +78,11 @@ exports.loginConsumer = async (req, res) => {
 // Update consumer
 exports.updateConsumer = async (req, res) => {
   try {
-    const { id } = req.params; // Consumer ID
+    const userId = req.user.id; 
     const { name, mobile, email, profilePic, status } = req.body;
 
-    // Find the consumer by ID
-    const consumer = await Consumer.findByPk(id);
+    // Find the consumer by userId (not by PK)
+    const consumer = await Consumer.findOne({ where: { userId } });
     if (!consumer) {
       return res.status(404).json({ message: 'Consumer not found' });
     }
@@ -131,10 +131,11 @@ exports.deleteConsumer = async (req, res) => {
 // Get consumer by ID
 exports.getConsumerById = async (req, res) => {
   try {
-    const { id } = req.params; // Consumer ID
+    const userId = req.user.id;
 
-    // Find the consumer by ID
-    const consumer = await Consumer.findByPk(id, {
+    // Find the consumer by userId
+    const consumer = await Consumer.findOne({
+      where: { userId },
       include: [{ model: User, as: 'user' }],
     });
     if (!consumer) {
@@ -148,36 +149,23 @@ exports.getConsumerById = async (req, res) => {
   }
 };
 
-// Get all consumers
-exports.getAllConsumers = async (req, res) => {
-  try {
-    // Find all consumers
-    const consumers = await Consumer.findAll({
-      include: [{ model: User, as: 'user' }],
-    });
-
-    res.status(200).json({ consumers });
-  } catch (error) {
-    console.error('Error fetching consumers:', error);
-    res.status(500).json({ message: 'Internal server error', error });
-  }
-};
-
-
 // Create Address
 exports.createAddress = async (req, res) => {
   try {
-    const { consumerId, addressTag, name, addressLine1, addressLine2, city, state, pincode, mobile, latitude, longitude } = req.body;
+    const { addressTag, name, addressLine1, addressLine2, city, state, pincode, mobile, latitude, longitude } = req.body;
 
-    // Check if the consumer exists
-    const consumer = await Consumer.findByPk(consumerId);
+    // Get userId from JWT
+    const userId = req.user.id;
+
+    // Find the consumer by userId
+    const consumer = await Consumer.findOne({ where: { userId } });
     if (!consumer) {
       return res.status(404).json({ message: 'Consumer not found' });
     }
 
     // Create the address
     const address = await Address.create({
-      consumerId,
+      consumerId: consumer.id,
       addressTag,
       name: addressTag === 'other' ? name : null, // Only set name if addressTag is "other"
       addressLine1,
@@ -206,10 +194,21 @@ exports.createAddress = async (req, res) => {
 // Get Addresses by Consumer ID
 exports.getAddressesByConsumerId = async (req, res) => {
   try {
-    const { consumerId } = req.params;
+    // Get userId from JWT
+    const userId = req.user.id;
 
-    // Find all addresses for the given consumer
-    const addresses = await Address.findAll({ where: { consumerId } });
+    // Find the consumer by userId
+    const consumer = await Consumer.findOne({ where: { userId } });
+    if (!consumer) {
+      return res.status(404).json({ message: 'Consumer not found' });
+    }
+
+    // Fetch addresses for the consumer
+    const addresses = await Address.findAll({ where: { consumerId: consumer.id } });
+
+    if (!addresses || addresses.length === 0) {
+      return res.status(404).json({ message: 'No addresses found for this consumer' });
+    }
 
     res.status(200).json({ addresses });
   } catch (error) {
@@ -221,11 +220,11 @@ exports.getAddressesByConsumerId = async (req, res) => {
 // Update Address
 exports.updateAddress = async (req, res) => {
   try {
-    const { id } = req.params;
+    const addressId = req.params.id;
     const { addressTag, name, addressLine1, addressLine2, city, state, pincode, mobile, latitude, longitude } = req.body;
 
     // Find the address by ID
-    const address = await Address.findByPk(id);
+    const address = await Address.findByPk(addressId);
     if (!address) {
       return res.status(404).json({ message: 'Address not found' });
     }
@@ -270,18 +269,21 @@ exports.deleteAddress = async (req, res) => {
     res.status(500).json({ message: 'Internal server error', error });
   }
 };
+
 exports.updateCurrentAddress = async (req, res) => {
   try {
-    const { consumerId, addressId } = req.body;
+    // Get userId from JWT
+    const userId = req.user.id;
+    const { addressId } = req.body;
 
-    // Check if the consumer exists
-    const consumer = await Consumer.findByPk(consumerId);
+    // Find the consumer by userId
+    const consumer = await Consumer.findOne({ where: { userId } });
     if (!consumer) {
       return res.status(404).json({ message: 'Consumer not found' });
     }
 
     // Check if the address exists and belongs to the consumer
-    const address = await Address.findOne({ where: { id: addressId, consumerId } });
+    const address = await Address.findOne({ where: { id: addressId, consumerId: consumer.id } });
     if (!address) {
       return res.status(404).json({ message: 'Address not found or does not belong to the consumer' });
     }

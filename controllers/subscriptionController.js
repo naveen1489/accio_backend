@@ -233,13 +233,19 @@ exports.getSubscriptionsByRestaurantId = async (req, res) => {
 };
 exports.getSubscriptionsByUserId = async (req, res) => {
   try {
-    const { userId } = req.params;
+    const userId = req.user.id;
 
-    // Find subscriptions by userId
+    // Find the consumer by userId
+    const consumer = await Consumer.findOne({ where: { userId } });
+    if (!consumer) {
+      return res.status(404).json({ message: 'Consumer not found for this user' });
+    }
+
+    // Find subscriptions by consumerId
     const subscriptions = await Subscription.findAll({
-      where: { userId },
+      where: { consumerId: consumer.id },
       include: [
-        { model: User, as: 'customer' },
+        { model: Consumer, as: 'customer' },
         { model: Restaurant, as: 'restaurant' },
         { model: Menu, as: 'menu' },
       ],

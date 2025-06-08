@@ -202,7 +202,7 @@ router.get('/restaurant/:restaurantId', subscriptionController.getSubscriptionsB
 
 /**
  * @swagger
- * /api/subscriptions/user/{userId}:
+ * /api/subscriptions/user:
  *   get:
  *     summary: Get subscriptions by user ID
  *     tags: [Subscriptions]
@@ -219,7 +219,7 @@ router.get('/restaurant/:restaurantId', subscriptionController.getSubscriptionsB
  *       500:
  *         description: Internal server error
  */
-router.get('/user/:userId', subscriptionController.getSubscriptionsByUserId);
+router.get('/user',authenticateToken, subscriptionController.getSubscriptionsByUserId);
 
 /**
  * @swagger
