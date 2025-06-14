@@ -234,7 +234,7 @@ router.post('/verify-otp', userController.verifyOtp);
 
 /**
  * @swagger
- * /api/users/restaurant/reset-password:
+ * /api/users/reset-password:
  *   post:
  *     summary: Reset password for a restaurant partner
  *     tags: [Users]
@@ -263,6 +263,6 @@ router.post('/verify-otp', userController.verifyOtp);
  *       500:
  *         description: Internal server error
  */
-router.post('/restaurant/reset-password', userController.resetPassword);
+router.post('/reset-password', authenticateToken, userController.resetPassword);
 
 module.exports = router;

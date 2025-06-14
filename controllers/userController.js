@@ -220,6 +220,8 @@ exports.loginRestaurant = async (req, res) => {
     try {
       const { username, newPassword, confirmPassword } = req.body;
       const token = req.headers.authorization?.split(' ')[1];
+
+      const userId = req.user.id;
   
       // Validate the JWT token
       const decoded = jwt.verify(token, process.env.JWT_SECRET);
@@ -233,7 +235,7 @@ exports.loginRestaurant = async (req, res) => {
       }
   
       // Find the user by username
-      const user = await User.findOne({ where: { username, role: 'restaurant' } });
+      const user = await User.findOne({ where: { id: userId, username} });
       if (!user) {
         return res.status(404).json({ message: 'User not found' });
       }
