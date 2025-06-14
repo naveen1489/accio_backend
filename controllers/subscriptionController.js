@@ -447,3 +447,17 @@ exports.updatePaymentStatus = async (req, res) => {
     res.status(500).json({ message: 'Internal server error', error });
   }
 };
+
+exports.getSubscriptionConfig = (req, res) => {
+  try {
+    const subscriptionConfig = {
+      mealPlanConfig,
+      mealFrequencyConfig,
+    };
+
+    res.status(200).json(subscriptionConfig);
+  } catch (error) {
+    console.error('Error fetching subscription config:', error);
+    res.status(500).json({ message: 'Internal server error', error });
+  }
+};
