@@ -299,4 +299,78 @@ router.get('/addresses/get', authenticateToken, consumerController.getAddressesB
 router.patch('/address/update/:id', authenticateToken, consumerController.updateAddress);
 router.delete('/address/delete/:id', authenticateToken, consumerController.deleteAddress);
 
+
+/**
+ * @swagger
+ * /api/consumers/menus/search:
+ *   get:
+ *     summary: Search for menus with filters and constraints
+ *     tags: [Consumers]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: category
+ *         schema:
+ *           type: string
+ *         description: Filter by menu category
+ *       - in: query
+ *         name: vegNonVeg
+ *         schema:
+ *           type: string
+ *           enum: [Veg, Non-Veg]
+ *         description: Filter by Veg or Non-Veg
+ *       - in: query
+ *         name: minPrice
+ *         schema:
+ *           type: number
+ *         description: Minimum price filter
+ *       - in: query
+ *         name: maxPrice
+ *         schema:
+ *           type: number
+ *         description: Maximum price filter
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           default: 1
+ *         description: Page number for pagination
+ *     responses:
+ *       200:
+ *         description: Menus fetched successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                 totalMenus:
+ *                   type: integer
+ *                 totalPages:
+ *                   type: integer
+ *                 currentPage:
+ *                   type: integer
+ *                 menus:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       id:
+ *                         type: string
+ *                       menuName:
+ *                         type: string
+ *                       price:
+ *                         type: number
+ *                       category:
+ *                         type: string
+ *                       vegNonVeg:
+ *                         type: string
+ *                       restaurantId:
+ *                         type: string
+ *       500:
+ *         description: Internal server error
+ */
+router.get('/menus/search', authenticateToken, consumerController.searchMenus);
 module.exports = router;

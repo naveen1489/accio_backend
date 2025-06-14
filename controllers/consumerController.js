@@ -1,6 +1,9 @@
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { User, Consumer, Address } = require('../models');
+const { Op } = require('sequelize');
+const haversine = require('haversine-distance'); // Use haversine-distance for distance calculation
+
 // Create consumer
 exports.createConsumer = async (req, res) => {
   try {
@@ -295,6 +298,77 @@ exports.updateCurrentAddress = async (req, res) => {
     res.status(200).json({ message: 'Current address updated successfully', consumer });
   } catch (error) {
     console.error('Error updating current address:', error);
+    res.status(500).json({ message: 'Internal server error', error });
+  }
+};
+
+
+exports.searchMenus = async (req, res) => {
+  try {
+    const userId = req.user.id; // Get userId from JWT
+    const { category, vegNonVeg, minPrice, maxPrice, page = 1 } = req.query;
+
+    // Find the consumer's current address
+    const consumer = await Consumer.findOne({ where: { userId } });
+    if (!consumer || !consumer.currentAddressId) {
+      return res.status(404).json({ message: 'Consumer or current address not found' });
+    }
+
+    const currentAddress = await Address.findByPk(consumer.currentAddressId);
+    if (!currentAddress) {
+      return res.status(404).json({ message: 'Current address not found' });
+    }
+
+    const currentLocation = {
+      latitude: parseFloat(currentAddress.latitude),
+      longitude: parseFloat(currentAddress.longitude),
+    };
+
+    // Fetch restaurants within 5 km
+    const restaurants = await Restaurant.findAll({
+      where: { status: 'active' },
+      attributes: ['id', 'latitude', 'longitude'],
+    });
+
+    const nearbyRestaurants = restaurants.filter((restaurant) => {
+      const restaurantLocation = {
+        latitude: parseFloat(restaurant.latitude),
+        longitude: parseFloat(restaurant.longitude),
+      };
+      const distance = haversine(currentLocation, restaurantLocation) / 1000; // Convert to km
+      return distance <= 5;
+    });
+
+    const nearbyRestaurantIds = nearbyRestaurants.map((restaurant) => restaurant.id);
+
+    if (nearbyRestaurantIds.length === 0) {
+      return res.status(200).json({ message: 'No restaurants found within 5 km', menus: [] });
+    }
+
+    // Fetch menus with filters and pagination
+    const offset = (page - 1) * 10; // Calculate offset for pagination
+    const menus = await Menu.findAndCountAll({
+      where: {
+        restaurantId: { [Op.in]: nearbyRestaurantIds },
+        status: 'active',
+        ...(category && { category }),
+        ...(vegNonVeg && { vegNonVeg }),
+        ...(minPrice && { price: { [Op.gte]: parseFloat(minPrice) } }),
+        ...(maxPrice && { price: { [Op.lte]: parseFloat(maxPrice) } }),
+      },
+      limit: 10,
+      offset,
+    });
+
+    res.status(200).json({
+      message: 'Menus fetched successfully',
+      totalMenus: menus.count,
+      totalPages: Math.ceil(menus.count / 10),
+      currentPage: parseInt(page),
+      menus: menus.rows,
+    });
+  } catch (error) {
+    console.error('Error searching menus:', error);
     res.status(500).json({ message: 'Internal server error', error });
   }
 };
