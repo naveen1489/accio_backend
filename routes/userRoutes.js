@@ -230,7 +230,7 @@ router.post('/send-otp', userController.sendOtp);
  *       500:
  *         description: Internal server error
  */
-router.post('/verify-otp', userController.verifyOtp);
+router.post('/verify-otp',authenticateToken, userController.verifyOtp);
 
 /**
  * @swagger
