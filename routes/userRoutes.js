@@ -179,7 +179,7 @@ router.post('/login-delivery', userController.loginDeliveryPartner);
 
 /**
  * @swagger
- * /api/users/restaurant/send-otp:
+ * /api/users/send-otp:
  *   post:
  *     summary: Send OTP to a restaurant partner
  *     tags: [Users]
@@ -200,11 +200,11 @@ router.post('/login-delivery', userController.loginDeliveryPartner);
  *       500:
  *         description: Internal server error
  */
-router.post('/restaurant/send-otp', userController.sendOtp);
+router.post('/send-otp', userController.sendOtp);
 
 /**
  * @swagger
- * /api/users/restaurant/verify-otp:
+ * /api/users/verify-otp:
  *   post:
  *     summary: Verify OTP for a restaurant partner
  *     tags: [Users]
@@ -230,7 +230,7 @@ router.post('/restaurant/send-otp', userController.sendOtp);
  *       500:
  *         description: Internal server error
  */
-router.post('/restaurant/verify-otp', userController.verifyOtp);
+router.post('/verify-otp', userController.verifyOtp);
 
 /**
  * @swagger

@@ -13,7 +13,7 @@ const mealPlanConfig = {
 const mealFrequencyConfig = {
   'Mon-Fri': [1, 2, 3, 4, 5], // Monday to Friday
   'Mon-Sat': [1, 2, 3, 4, 5, 6], // Monday to Saturday
-  'Mon-Sun': [0, 1, 2, 3, 4, 5, 6], // All days of the week
+  'Mon-Sun': [1, 2, 3, 4, 5, 6, 7], // All days of the week
 };
 
 const calculateNumberOfOrders = (mealPlan, mealFrequency) => {
