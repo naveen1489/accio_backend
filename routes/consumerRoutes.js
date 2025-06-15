@@ -373,4 +373,46 @@ router.delete('/address/delete/:id', authenticateToken, consumerController.delet
  *         description: Internal server error
  */
 router.get('/menus/search', authenticateToken, consumerController.searchMenus);
+/**
+ * @swagger
+ * /api/consumers/orders:
+ *   get:
+ *     summary: Get all orders for the authenticated consumer with filters and pagination
+ *     tags: [Consumers]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: status
+ *         schema:
+ *           type: string
+ *         description: Filter by order status
+ *       - in: query
+ *         name: startDate
+ *         schema:
+ *           type: string
+ *           format: date
+ *         description: Filter orders from this date (YYYY-MM-DD)
+ *       - in: query
+ *         name: endDate
+ *         schema:
+ *           type: string
+ *           format: date
+ *         description: Filter orders up to this date (YYYY-MM-DD)
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           default: 1
+ *         description: Page number for pagination
+ *     responses:
+ *       200:
+ *         description: Orders fetched successfully
+ *       404:
+ *         description: Consumer not found
+ *       500:
+ *         description: Internal server error
+ */
+router.get('/orders', authenticateToken, consumerController.getOrdersForConsumer);
+
 module.exports = router;
