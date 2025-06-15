@@ -336,7 +336,7 @@ exports.searchMenus = async (req, res) => {
 
     // Fetch all active restaurants
     const restaurants = await Restaurant.findAll({
-      where: { status: 'active' },
+      where: { status: 'Active' },
       attributes: ['id', 'latitude', 'longitude'],
     });
     console.log('Fetched restaurants count:', restaurants.length);
@@ -365,7 +365,7 @@ exports.searchMenus = async (req, res) => {
     // Build menu filter
     const menuWhere = {
       restaurantId: { [Op.in]: nearbyRestaurantIds },
-      status: 'active',
+      status: 'Approved',
     };
     if (category) menuWhere.category = category;
     if (vegNonVeg) menuWhere.vegNonVeg = vegNonVeg;
@@ -380,16 +380,33 @@ exports.searchMenus = async (req, res) => {
       where: menuWhere,
       limit: 10,
       offset,
+        include: [
+        {
+          model: Restaurant,
+          as: 'restaurant',
+          attributes: ['id', 'name'],
+        },
+      ],
     });
 
     console.log('Menus found:', menus.count);
+
+     // Add restaurantName to each menu in the response
+    const menusWithRestaurant = menus.rows.map(menu => {
+      const menuObj = menu.toJSON();
+      return {
+        ...menuObj,
+        restaurantName: menuObj.restaurant ? menuObj.restaurant.name : null,
+      };
+    });
+
 
     res.status(200).json({
       message: 'Menus fetched successfully',
       totalMenus: menus.count,
       totalPages: Math.ceil(menus.count / 10),
       currentPage: parseInt(page),
-      menus: menus.rows,
+      menus: menusWithRestaurant,
     });
   } catch (error) {
     console.error('Error searching menus:', error);
