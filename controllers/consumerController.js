@@ -1,6 +1,6 @@
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-const { User, Consumer, Address, Restaurant , Menu } = require('../models');
+const {Order, User, Consumer, Address, Restaurant , Menu } = require('../models');
 const { Op } = require('sequelize');
 const haversine = require('haversine-distance'); // Use haversine-distance for distance calculation
 
@@ -410,6 +410,62 @@ exports.searchMenus = async (req, res) => {
     });
   } catch (error) {
     console.error('Error searching menus:', error);
+    res.status(500).json({ message: 'Internal server error', error });
+  }
+};
+
+exports.getOrdersForConsumer = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { status, startDate, endDate, page = 1 } = req.query;
+
+    // Find the consumer by userId
+    const consumer = await Consumer.findOne({ where: { userId } });
+    if (!consumer) {
+      return res.status(404).json({ message: 'Consumer not found' });
+    }
+
+    // Build filter
+    const where = {
+      consumerId: consumer.id,
+      createdAt: { [Op.lte]: new Date() }, // till today
+    };
+    if (status) where.status = status;
+    if (startDate) where.createdAt[Op.gte] = new Date(startDate);
+    if (endDate) where.createdAt[Op.lte] = new Date(endDate);
+
+    const limit = 10;
+    const offset = (page - 1) * limit;
+
+    // Fetch orders with menu and restaurant info
+    const orders = await Order.findAndCountAll({
+      where,
+      limit,
+      offset,
+      order: [['createdAt', 'DESC']],
+      include: [
+        {
+          model: Menu,
+          as: 'menu',
+          attributes: ['id', 'menuName', 'price'],
+        },
+        {
+          model: Restaurant,
+          as: 'restaurant',
+          attributes: ['id', 'name'],
+        },
+      ],
+    });
+
+    res.status(200).json({
+      message: 'Orders fetched successfully',
+      totalOrders: orders.count,
+      totalPages: Math.ceil(orders.count / limit),
+      currentPage: parseInt(page),
+      orders: orders.rows,
+    });
+  } catch (error) {
+    console.error('Error fetching orders:', error);
     res.status(500).json({ message: 'Internal server error', error });
   }
 };
