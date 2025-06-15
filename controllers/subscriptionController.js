@@ -231,6 +231,7 @@ exports.getSubscriptionsByRestaurantId = async (req, res) => {
     res.status(500).json({ message: 'Internal server error', error });
   }
 };
+
 exports.getSubscriptionsByUserId = async (req, res) => {
   try {
     const userId = req.user.id;
@@ -251,12 +252,26 @@ exports.getSubscriptionsByUserId = async (req, res) => {
       ],
     });
 
-    res.status(200).json({ subscriptions });
+       // Fetch and attach address for each subscription
+    const subscriptionsWithAddress = await Promise.all(
+      subscriptions.map(async (sub) => {
+        const address = sub.addressId ? await Address.findByPk(sub.addressId) : null;
+        return {
+          ...sub.toJSON(),
+          address,
+        };
+      })
+    );
+
+
+    res.status(200).json({ subscriptions: subscriptionsWithAddress });
   } catch (error) {
     console.error('Error fetching subscriptions by userId:', error);
     res.status(500).json({ message: 'Internal server error', error });
   }
 };
+
+
 exports.getSubscriptionById = async (req, res) => {
   try {
     const { id } = req.params;
