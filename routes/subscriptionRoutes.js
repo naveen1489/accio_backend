@@ -220,6 +220,43 @@ router.get('/restaurant/:restaurantId',authenticateToken, subscriptionController
  *         description: Internal server error
  */
 router.get('/user',authenticateToken, subscriptionController.getSubscriptionsByUserId);
+/**
+ * @swagger
+ * /api/subscriptions/config:
+ *   get:
+ *     summary: Get subscription configuration
+ *     tags: [Subscriptions]
+ *     responses:
+ *       200:
+ *         description: Subscription configuration fetched successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 mealPlanConfig:
+ *                   type: object
+ *                   additionalProperties:
+ *                     type: integer
+ *                   example:
+ *                     "1 Week": 7
+ *                     "2 Week": 14
+ *                     "3 Week": 21
+ *                     "4 Week": 28
+ *                 mealFrequencyConfig:
+ *                   type: object
+ *                   additionalProperties:
+ *                     type: array
+ *                     items:
+ *                       type: integer
+ *                   example:
+ *                     "Mon-Fri": [1, 2, 3, 4, 5]
+ *                     "Mon-Sat": [1, 2, 3, 4, 5, 6]
+ *                     "Mon-Sun": [1, 2, 3, 4, 5, 6, 7]
+ *       500:
+ *         description: Internal server error
+ */
+router.get('/config',authenticateToken, subscriptionController.getSubscriptionConfig);
 
 /**
  * @swagger
@@ -358,41 +395,4 @@ router.patch('/:id/resume',authenticateToken, subscriptionController.resumeSubsc
  */
 router.patch('/:id/payment-status', authenticateToken, subscriptionController.updatePaymentStatus);
 
-/**
- * @swagger
- * /api/subscriptions/config:
- *   get:
- *     summary: Get subscription configuration
- *     tags: [Subscriptions]
- *     responses:
- *       200:
- *         description: Subscription configuration fetched successfully
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 mealPlanConfig:
- *                   type: object
- *                   additionalProperties:
- *                     type: integer
- *                   example:
- *                     "1 Week": 7
- *                     "2 Week": 14
- *                     "3 Week": 21
- *                     "4 Week": 28
- *                 mealFrequencyConfig:
- *                   type: object
- *                   additionalProperties:
- *                     type: array
- *                     items:
- *                       type: integer
- *                   example:
- *                     "Mon-Fri": [1, 2, 3, 4, 5]
- *                     "Mon-Sat": [1, 2, 3, 4, 5, 6]
- *                     "Mon-Sun": [1, 2, 3, 4, 5, 6, 7]
- *       500:
- *         description: Internal server error
- */
-router.get('/config',authenticateToken, subscriptionController.getSubscriptionConfig);
 module.exports = router;
