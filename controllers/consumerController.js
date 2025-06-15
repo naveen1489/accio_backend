@@ -1,6 +1,6 @@
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-const { User, Consumer, Address } = require('../models');
+const { User, Consumer, Address, Restaurant  } = require('../models');
 const { Op } = require('sequelize');
 const haversine = require('haversine-distance'); // Use haversine-distance for distance calculation
 
