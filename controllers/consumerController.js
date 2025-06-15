@@ -427,12 +427,12 @@ exports.getOrdersForConsumer = async (req, res) => {
 
     // Build filter
     const where = {
-      consumerId: consumer.id,
-      createdAt: { [Op.lte]: new Date() }, // till today
+      userId: consumer.id,
+      orderDate: { [Op.lte]: new Date() }, // till today
     };
     if (status) where.status = status;
-    if (startDate) where.createdAt[Op.gte] = new Date(startDate);
-    if (endDate) where.createdAt[Op.lte] = new Date(endDate);
+    if (startDate) where.orderDate[Op.gte] = new Date(startDate);
+    if (endDate) where.orderDate[Op.lte] = new Date(endDate);
 
     const limit = 10;
     const offset = (page - 1) * limit;
