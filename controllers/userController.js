@@ -162,7 +162,7 @@ exports.loginRestaurant = async (req, res) => {
   
       // Generate a JWT token with OTP pending verification
       const token = jwt.sign(
-        { username, otpVerified: false },
+        {id: user.id, username, otpVerified: false },
         process.env.JWT_SECRET,
         { expiresIn: '10m' } // Token expires in 10 minutes
       );
@@ -198,13 +198,19 @@ exports.loginRestaurant = async (req, res) => {
       if (new Date() > otpRecord.expiresAt) {
         return res.status(400).json({ message: 'OTP has expired' });
       }
+
+      // Find the user by username
+    const user = await User.findOne({ where: { username } });
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
   
       // OTP is valid, delete it from the database
       await otpRecord.destroy();
   
       // Generate a new JWT token with OTP verified
       const newToken = jwt.sign(
-        { username, otpVerified: true },
+        { id: user.id,username, otpVerified: true },
         process.env.JWT_SECRET,
         { expiresIn: '10m' } // Token expires in 10 minutes
       );
@@ -220,6 +226,8 @@ exports.loginRestaurant = async (req, res) => {
     try {
       const { username, newPassword, confirmPassword } = req.body;
       const token = req.headers.authorization?.split(' ')[1];
+
+      const userId = req.user.id;
   
       // Validate the JWT token
       const decoded = jwt.verify(token, process.env.JWT_SECRET);
@@ -233,7 +241,7 @@ exports.loginRestaurant = async (req, res) => {
       }
   
       // Find the user by username
-      const user = await User.findOne({ where: { username, role: 'restaurant' } });
+      const user = await User.findOne({ where: { id: userId, username} });
       if (!user) {
         return res.status(404).json({ message: 'User not found' });
       }

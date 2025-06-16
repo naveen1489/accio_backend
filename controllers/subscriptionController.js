@@ -13,7 +13,7 @@ const mealPlanConfig = {
 const mealFrequencyConfig = {
   'Mon-Fri': [1, 2, 3, 4, 5], // Monday to Friday
   'Mon-Sat': [1, 2, 3, 4, 5, 6], // Monday to Saturday
-  'Mon-Sun': [0, 1, 2, 3, 4, 5, 6], // All days of the week
+  'Mon-Sun': [1, 2, 3, 4, 5, 6, 7], // All days of the week
 };
 
 const calculateNumberOfOrders = (mealPlan, mealFrequency) => {
@@ -231,6 +231,7 @@ exports.getSubscriptionsByRestaurantId = async (req, res) => {
     res.status(500).json({ message: 'Internal server error', error });
   }
 };
+
 exports.getSubscriptionsByUserId = async (req, res) => {
   try {
     const userId = req.user.id;
@@ -251,12 +252,26 @@ exports.getSubscriptionsByUserId = async (req, res) => {
       ],
     });
 
-    res.status(200).json({ subscriptions });
+       // Fetch and attach address for each subscription
+    const subscriptionsWithAddress = await Promise.all(
+      subscriptions.map(async (sub) => {
+        const address = sub.addressId ? await Address.findByPk(sub.addressId) : null;
+        return {
+          ...sub.toJSON(),
+          address,
+        };
+      })
+    );
+
+
+    res.status(200).json({ subscriptions: subscriptionsWithAddress });
   } catch (error) {
     console.error('Error fetching subscriptions by userId:', error);
     res.status(500).json({ message: 'Internal server error', error });
   }
 };
+
+
 exports.getSubscriptionById = async (req, res) => {
   try {
     const { id } = req.params;
@@ -444,6 +459,20 @@ exports.updatePaymentStatus = async (req, res) => {
     res.status(200).json({ message: 'Payment status updated successfully', subscription });
   } catch (error) {
     console.error('Error updating payment status:', error);
+    res.status(500).json({ message: 'Internal server error', error });
+  }
+};
+
+exports.getSubscriptionConfig = (req, res) => {
+  try {
+    const subscriptionConfig = {
+      mealPlanConfig,
+      mealFrequencyConfig,
+    };
+
+    res.status(200).json(subscriptionConfig);
+  } catch (error) {
+    console.error('Error fetching subscription config:', error);
     res.status(500).json({ message: 'Internal server error', error });
   }
 };

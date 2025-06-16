@@ -1,6 +1,9 @@
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-const { User, Consumer, Address } = require('../models');
+const {Order, User, Consumer, Address, Restaurant , Menu } = require('../models');
+const { Op } = require('sequelize');
+const haversine = require('haversine-distance'); // Use haversine-distance for distance calculation
+
 // Create consumer
 exports.createConsumer = async (req, res) => {
   try {
@@ -295,6 +298,174 @@ exports.updateCurrentAddress = async (req, res) => {
     res.status(200).json({ message: 'Current address updated successfully', consumer });
   } catch (error) {
     console.error('Error updating current address:', error);
+    res.status(500).json({ message: 'Internal server error', error });
+  }
+};
+
+exports.searchMenus = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { category, vegNonVeg, minPrice, maxPrice, page = 1 } = req.query;
+
+    console.log('--- searchMenus called ---');
+    console.log('userId from JWT:', userId);
+    console.log('Query params:', req.query);
+
+    // Find the consumer's current address
+    const consumer = await Consumer.findOne({ where: { userId } });
+    console.log('Consumer:', consumer ? consumer.toJSON() : null);
+
+    if (!consumer || !consumer.currentAddressId) {
+      console.log('Consumer or current address not found');
+      return res.status(404).json({ message: 'Consumer or current address not found' });
+    }
+
+    const currentAddress = await Address.findByPk(consumer.currentAddressId);
+    console.log('Current Address:', currentAddress ? currentAddress.toJSON() : null);
+
+    if (!currentAddress) {
+      console.log('Current address not found');
+      return res.status(404).json({ message: 'Current address not found' });
+    }
+
+    const currentLocation = {
+      latitude: parseFloat(currentAddress.latitude),
+      longitude: parseFloat(currentAddress.longitude),
+    };
+    console.log('Current Location:', currentLocation);
+
+    // Fetch all active restaurants
+    const restaurants = await Restaurant.findAll({
+      where: { status: 'Active' },
+      attributes: ['id', 'latitude', 'longitude'],
+    });
+    console.log('Fetched restaurants count:', restaurants.length);
+
+    // Filter restaurants within 5 km
+    const nearbyRestaurants = restaurants.filter((restaurant) => {
+      const restaurantLocation = {
+        latitude: parseFloat(restaurant.latitude),
+        longitude: parseFloat(restaurant.longitude),
+      };
+      const distance = haversine(currentLocation, restaurantLocation) / 1000; // km
+      // Debug log for each restaurant
+      console.log(
+        `Restaurant ID: ${restaurant.id}, Distance: ${distance.toFixed(2)} km`
+      );
+      return distance <= 5;
+    });
+    const nearbyRestaurantIds = nearbyRestaurants.map((restaurant) => restaurant.id);
+    console.log('Nearby restaurant IDs:', nearbyRestaurantIds);
+
+    if (nearbyRestaurantIds.length === 0) {
+      console.log('No restaurants found within 5 km');
+      return res.status(200).json({ message: 'No restaurants found within 5 km', menus: [] });
+    }
+
+    // Build menu filter
+    const menuWhere = {
+      restaurantId: { [Op.in]: nearbyRestaurantIds },
+      status: 'Approved',
+    };
+    if (category) menuWhere.category = category;
+    if (vegNonVeg) menuWhere.vegNonVeg = vegNonVeg;
+    if (minPrice) menuWhere.price = { ...(menuWhere.price || {}), [Op.gte]: parseFloat(minPrice) };
+    if (maxPrice) menuWhere.price = { ...(menuWhere.price || {}), [Op.lte]: parseFloat(maxPrice) };
+
+    console.log('Menu filter:', menuWhere);
+
+    // Fetch menus with filters and pagination
+    const offset = (page - 1) * 10;
+    const menus = await Menu.findAndCountAll({
+      where: menuWhere,
+      limit: 10,
+      offset,
+        include: [
+        {
+          model: Restaurant,
+          as: 'restaurant',
+          attributes: ['id', 'name'],
+        },
+      ],
+    });
+
+    console.log('Menus found:', menus.count);
+
+     // Add restaurantName to each menu in the response
+    const menusWithRestaurant = menus.rows.map(menu => {
+      const menuObj = menu.toJSON();
+      return {
+        ...menuObj,
+        restaurantName: menuObj.restaurant ? menuObj.restaurant.name : null,
+      };
+    });
+
+
+    res.status(200).json({
+      message: 'Menus fetched successfully',
+      totalMenus: menus.count,
+      totalPages: Math.ceil(menus.count / 10),
+      currentPage: parseInt(page),
+      menus: menusWithRestaurant,
+    });
+  } catch (error) {
+    console.error('Error searching menus:', error);
+    res.status(500).json({ message: 'Internal server error', error });
+  }
+};
+
+exports.getOrdersForConsumer = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { status, startDate, endDate, page = 1 } = req.query;
+
+    // Find the consumer by userId
+    const consumer = await Consumer.findOne({ where: { userId } });
+    if (!consumer) {
+      return res.status(404).json({ message: 'Consumer not found' });
+    }
+
+    // Build filter
+    const where = {
+      userId: consumer.id,
+      orderDate: { [Op.lte]: new Date() }, // till today
+    };
+    if (status) where.status = status;
+    if (startDate) where.orderDate[Op.gte] = new Date(startDate);
+    if (endDate) where.orderDate[Op.lte] = new Date(endDate);
+
+    const limit = 10;
+    const offset = (page - 1) * limit;
+
+    // Fetch orders with menu and restaurant info
+    const orders = await Order.findAndCountAll({
+      where,
+      limit,
+      offset,
+      order: [['createdAt', 'DESC']],
+      include: [
+        {
+          model: Menu,
+          as: 'menu',
+          attributes: ['id', 'menuName', 'price'],
+        },
+        {
+          model: Restaurant,
+          as: 'restaurant',
+          attributes: ['id', 'name'],
+        },
+      ],
+    });
+
+    res.status(200).json({
+      message: 'Orders fetched successfully',
+      totalOrders: orders.count,
+      totalPages: Math.ceil(orders.count / limit),
+      currentPage: parseInt(page),
+      orders: orders.rows,
+    });
+  } catch (error) {
+    console.error('Error fetching orders:', error);
     res.status(500).json({ message: 'Internal server error', error });
   }
 };

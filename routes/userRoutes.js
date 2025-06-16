@@ -179,7 +179,7 @@ router.post('/login-delivery', userController.loginDeliveryPartner);
 
 /**
  * @swagger
- * /api/users/restaurant/send-otp:
+ * /api/users/send-otp:
  *   post:
  *     summary: Send OTP to a restaurant partner
  *     tags: [Users]
@@ -200,11 +200,11 @@ router.post('/login-delivery', userController.loginDeliveryPartner);
  *       500:
  *         description: Internal server error
  */
-router.post('/restaurant/send-otp', userController.sendOtp);
+router.post('/send-otp', userController.sendOtp);
 
 /**
  * @swagger
- * /api/users/restaurant/verify-otp:
+ * /api/users/verify-otp:
  *   post:
  *     summary: Verify OTP for a restaurant partner
  *     tags: [Users]
@@ -230,11 +230,11 @@ router.post('/restaurant/send-otp', userController.sendOtp);
  *       500:
  *         description: Internal server error
  */
-router.post('/restaurant/verify-otp', userController.verifyOtp);
+router.post('/verify-otp',authenticateToken, userController.verifyOtp);
 
 /**
  * @swagger
- * /api/users/restaurant/reset-password:
+ * /api/users/reset-password:
  *   post:
  *     summary: Reset password for a restaurant partner
  *     tags: [Users]
@@ -263,6 +263,6 @@ router.post('/restaurant/verify-otp', userController.verifyOtp);
  *       500:
  *         description: Internal server error
  */
-router.post('/restaurant/reset-password', userController.resetPassword);
+router.post('/reset-password', authenticateToken, userController.resetPassword);
 
 module.exports = router;
