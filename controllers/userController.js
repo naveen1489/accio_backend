@@ -2,7 +2,7 @@
 
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-const { User, OTP } = require('../models');
+const { User, OTP, Consumer } = require('../models');
 
 // Register Admin
 exports.registerAdmin = async (req, res) => {
@@ -207,6 +207,63 @@ exports.loginRestaurant = async (req, res) => {
   
       // OTP is valid, delete it from the database
       await otpRecord.destroy();
+  
+      // Generate a new JWT token with OTP verified
+      const newToken = jwt.sign(
+        { id: user.id,username, otpVerified: true },
+        process.env.JWT_SECRET,
+        { expiresIn: '10m' } // Token expires in 10 minutes
+      );
+  
+      res.status(200).json({ message: 'OTP verified successfully', token: newToken });
+    } catch (error) {
+      console.error('Error verifying OTP:', error);
+      res.status(500).json({ message: 'Internal server error', error });
+    }
+  };
+
+  exports.verifyOtpForConsumerSignup = async (req, res) => {
+    try {
+      const { username, otp } = req.body;
+      const token = req.headers.authorization?.split(' ')[1];
+  
+      // Validate the JWT token
+      const decoded = jwt.verify(token, process.env.JWT_SECRET);
+      if (decoded.username !== username || decoded.otpVerified) {
+        return res.status(400).json({ message: 'Invalid or already verified token' });
+      }
+  
+      // Find the OTP record for the given username
+      const otpRecord = await OTP.findOne({ where: { username, otp } });
+      if (!otpRecord) {
+        return res.status(400).json({ message: 'Invalid OTP' });
+      }
+  
+      // Check if the OTP is expired
+      if (new Date() > otpRecord.expiresAt) {
+        return res.status(400).json({ message: 'OTP has expired' });
+      }
+
+      // Find the user by username
+    const user = await User.findOne({ where: { username } });
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+  
+
+    // Find the consumer by userId
+    const consumer = await Consumer.findOne({ where: { userId: user.id } });
+    if (!consumer) {
+      return res.status(404).json({ message: 'Consumer not found' });
+    }
+
+       // Update consumer status to Active
+    consumer.status = 'Active';
+    await consumer.save();
+      // OTP is valid, delete it from the database
+      await otpRecord.destroy();
+
+
   
       // Generate a new JWT token with OTP verified
       const newToken = jwt.sign(

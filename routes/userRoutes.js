@@ -232,6 +232,40 @@ router.post('/send-otp', userController.sendOtp);
  */
 router.post('/verify-otp',authenticateToken, userController.verifyOtp);
 
+
+
+/**
+ * @swagger
+ * /api/users/consumer/verify-otp:
+ *   post:
+ *     summary: Verify OTP for a restaurant partner
+ *     tags: [Users]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               phone:
+ *                 type: string
+ *               otp:
+ *                 type: string
+ *           example:
+ *             phone: "9876543210"
+ *             otp: "123456"
+ *     responses:
+ *       200:
+ *         description: OTP verified successfully
+ *       400:
+ *         description: Invalid OTP
+ *       500:
+ *         description: Internal server error
+ */
+router.post('/consumer/verify-otp',authenticateToken, userController.verifyOtpForConsumerSignup);
+
+
+
 /**
  * @swagger
  * /api/users/reset-password:
