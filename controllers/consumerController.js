@@ -1,6 +1,6 @@
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-const {Order, User, Consumer, Address, Restaurant , Menu } = require('../models');
+const {Order, User, Consumer, Address, Restaurant , Menu, MenuCategory } = require('../models');
 const { Op } = require('sequelize');
 const haversine = require('haversine-distance'); // Use haversine-distance for distance calculation
 
@@ -367,12 +367,22 @@ exports.searchMenus = async (req, res) => {
       restaurantId: { [Op.in]: nearbyRestaurantIds },
       status: 'Approved',
     };
-    if (category) menuWhere.category = category;
+    //if (category) menuWhere.category = category;
     if (vegNonVeg) menuWhere.vegNonVeg = vegNonVeg;
     if (minPrice) menuWhere.price = { ...(menuWhere.price || {}), [Op.gte]: parseFloat(minPrice) };
     if (maxPrice) menuWhere.price = { ...(menuWhere.price || {}), [Op.lte]: parseFloat(maxPrice) };
 
     console.log('Menu filter:', menuWhere);
+
+    // Build include for MenuCategory with categoryName filter
+    const menuCategoryInclude = {
+      model: MenuCategory,
+      as: 'menuCategories',
+      required: !!category, // Only require join if filtering by category
+      ...(category && {
+        where: { categoryName: category }
+      })
+    };
 
     // Fetch menus with filters and pagination
     const offset = (page - 1) * 10;
@@ -381,6 +391,7 @@ exports.searchMenus = async (req, res) => {
       limit: 10,
       offset,
         include: [
+          menuCategoryInclude,
         {
           model: Restaurant,
           as: 'restaurant',
