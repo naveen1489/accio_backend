@@ -236,7 +236,7 @@ router.post('/verify-otp',authenticateToken, userController.verifyOtp);
 
 /**
  * @swagger
- * /api/users/consumer/verify-otp:
+ * /api/users/consumer/signup/verify-otp:
  *   post:
  *     summary: Verify OTP for a restaurant partner
  *     tags: [Users]
@@ -262,7 +262,7 @@ router.post('/verify-otp',authenticateToken, userController.verifyOtp);
  *       500:
  *         description: Internal server error
  */
-router.post('/consumer/verify-otp',authenticateToken, userController.verifyOtpForConsumerSignup);
+router.post('/consumer/signup/verify-otp',authenticateToken, userController.verifyOtpForConsumerSignup);
 
 
 

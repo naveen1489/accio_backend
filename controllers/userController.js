@@ -258,7 +258,7 @@ exports.loginRestaurant = async (req, res) => {
     }
 
        // Update consumer status to Active
-    consumer.status = 'Active';
+    consumer.status = 'active';
     await consumer.save();
       // OTP is valid, delete it from the database
       await otpRecord.destroy();

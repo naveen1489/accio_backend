@@ -37,7 +37,7 @@ exports.createConsumer = async (req, res) => {
       mobile,
       email,
       profilePic,
-      status: 'active', // Default status
+      status: 'pending', // Default status
     });
 
     res.status(201).json({ message: 'Consumer created successfully', consumer });
