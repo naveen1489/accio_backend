@@ -448,7 +448,7 @@ exports.updateCloseDates = async (req, res) => {
       return res.status(400).json({ message: 'Both closeStartDate and closeEndDate are required' });
     }
 
-    const restaurant = await Restaurant.findOne({ where: { ownerId: userId } });
+    const restaurant = await Restaurant.findOne({ where: { userId: userId } });
     if (!restaurant) {
       return res.status(404).json({ message: 'Restaurant not found for this user' });
     }
