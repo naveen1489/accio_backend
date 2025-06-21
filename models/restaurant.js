@@ -83,6 +83,14 @@ module.exports = (sequelize, DataTypes) => {
             type: DataTypes.TEXT, 
             allowNull: false,
         },
+        closeStartDate: {
+        type: DataTypes.DATE,
+        allowNull: true, // This field is set when the subscription is paused
+      },
+      closeEndDate: {
+        type: DataTypes.DATE,
+        allowNull: true, // This field is set when the subscription is paused
+      },
         userId: { // New column
             type: DataTypes.UUID,
             allowNull: true, // Initially allow null for backfilling

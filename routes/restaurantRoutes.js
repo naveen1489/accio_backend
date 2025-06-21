@@ -372,5 +372,38 @@ router.patch('/stop-subscription', authenticateToken, restaurantController.stopS
  */
 router.patch('/start-subscription', authenticateToken, restaurantController.startSubscription);
 
-
+/**
+ * @swagger
+ * /api/restaurants/close-dates:
+ *   patch:
+ *     summary: Update restaurant close dates
+ *     tags: [Restaurants]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               closeStartDate:
+ *                 type: string
+ *                 format: date
+ *                 example: "2025-06-01"
+ *               closeEndDate:
+ *                 type: string
+ *                 format: date
+ *                 example: "2025-06-10"
+ *     responses:
+ *       200:
+ *         description: Close dates updated successfully
+ *       400:
+ *         description: Missing required fields
+ *       404:
+ *         description: Restaurant not found
+ *       500:
+ *         description: Internal server error
+ */
+router.patch('/close-dates', authenticateToken, restaurantController.updateCloseDates);
 module.exports = router;
