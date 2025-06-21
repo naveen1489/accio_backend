@@ -405,3 +405,35 @@ exports.getDeliveryPartnerById = async (req, res) => {
     res.status(500).json({ message: 'Internal server error', error });
   }
 };
+
+exports.stopSubscription = async (req, res) => {
+  try {
+    const userId = req.user.id; // Get userId from JWT
+    const restaurant = await Restaurant.findOne({ where: { userId: userId } }); // Assuming ownerId links the restaurant to the user
+    if (!restaurant) {
+      return res.status(404).json({ message: 'Restaurant not found for this user' });
+    }
+    restaurant.status = 'Inactive';
+    await restaurant.save();
+    res.status(200).json({ message: 'Restaurant subscription stopped (set to Inactive)', restaurant });
+  } catch (error) {
+    console.error('Error stopping subscription:', error);
+    res.status(500).json({ message: 'Internal server error', error });
+  }
+};
+
+exports.startSubscription = async (req, res) => {
+  try {
+    const userId = req.user.id; // Get userId from JWT
+    const restaurant = await Restaurant.findOne({ where: { userId: userId } }); // Assuming ownerId links the restaurant to the user
+    if (!restaurant) {
+      return res.status(404).json({ message: 'Restaurant not found for this user' });
+    }
+    restaurant.status = 'Active';
+    await restaurant.save();
+    res.status(200).json({ message: 'Restaurant subscription started (set to Active)', restaurant });
+  } catch (error) {
+    console.error('Error starting subscription:', error);
+    res.status(500).json({ message: 'Internal server error', error });
+  }
+};
