@@ -37,7 +37,7 @@ exports.createConsumer = async (req, res) => {
       mobile,
       email,
       profilePic,
-      status: 'inactive', // Default status
+      status: 'pending', // Default status
     });
 
     res.status(201).json({ message: 'Consumer created successfully', consumer });
@@ -342,6 +342,7 @@ exports.searchMenus = async (req, res) => {
     console.log('Fetched restaurants count:', restaurants.length);
 
     // Filter restaurants within 5 km
+    const restaurantDistances = {};
     const nearbyRestaurants = restaurants.filter((restaurant) => {
       const restaurantLocation = {
         latitude: parseFloat(restaurant.latitude),
@@ -352,6 +353,7 @@ exports.searchMenus = async (req, res) => {
       console.log(
         `Restaurant ID: ${restaurant.id}, Distance: ${distance.toFixed(2)} km`
       );
+       restaurantDistances[restaurant.id] = distance;
       return distance <= 5;
     });
     const nearbyRestaurantIds = nearbyRestaurants.map((restaurant) => restaurant.id);
@@ -402,15 +404,17 @@ exports.searchMenus = async (req, res) => {
 
     console.log('Menus found:', menus.count);
 
-     // Add restaurantName to each menu in the response
+  // Add restaurantName and distance to each menu in the response
     const menusWithRestaurant = menus.rows.map(menu => {
       const menuObj = menu.toJSON();
+      const restaurant = menuObj.restaurant;
+      const distance = restaurant ? restaurantDistances[restaurant.id] : null;
       return {
         ...menuObj,
-        restaurantName: menuObj.restaurant ? menuObj.restaurant.name : null,
+        restaurantName: restaurant ? restaurant.name : null,
+        distance: distance !== undefined ? Number(distance.toFixed(2)) : null, // in km, rounded to 2 decimals
       };
     });
-
 
     res.status(200).json({
       message: 'Menus fetched successfully',
@@ -458,7 +462,14 @@ exports.getOrdersForConsumer = async (req, res) => {
         {
           model: Menu,
           as: 'menu',
-          attributes: ['id', 'menuName', 'price'],
+          attributes: ['id', 'menuName', 'price', 'vegNonVeg'],
+          include: [
+            {
+              model: Subscription,
+              as: 'subscription',
+              attributes: ['id', 'categoryName'],
+            },
+          ],
         },
         {
           model: Restaurant,
@@ -468,12 +479,21 @@ exports.getOrdersForConsumer = async (req, res) => {
       ],
     });
 
+   // Add categoryName to each order in the response
+    const ordersWithCategory = orders.rows.map(order => {
+      const orderObj = order.toJSON();
+      return {
+        ...orderObj,
+        categoryName: orderObj.subscription ? orderObj.subscription.categoryName : null,
+      };
+    });
+    
     res.status(200).json({
       message: 'Orders fetched successfully',
       totalOrders: orders.count,
       totalPages: Math.ceil(orders.count / limit),
       currentPage: parseInt(page),
-      orders: orders.rows,
+      orders: ordersWithCategory,
     });
   } catch (error) {
     console.error('Error fetching orders:', error);
