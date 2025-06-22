@@ -479,15 +479,7 @@ exports.getOrdersForConsumer = async (req, res) => {
       ],
     });
 
-   // Add categoryName to each order in the response
-    const ordersWithCategory = orders.rows.map(order => {
-      const orderObj = order.toJSON();
-      return {
-        ...orderObj,
-        categoryName: orderObj.subscription ? orderObj.subscription.categoryName : null,
-      };
-    });
-    
+  
     res.status(200).json({
       message: 'Orders fetched successfully',
       totalOrders: orders.count,
