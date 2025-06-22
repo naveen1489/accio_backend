@@ -462,7 +462,14 @@ exports.getOrdersForConsumer = async (req, res) => {
         {
           model: Menu,
           as: 'menu',
-          attributes: ['id', 'menuName', 'price'],
+          attributes: ['id', 'menuName', 'price', 'vegNonVeg'],
+          include: [
+            {
+              model: MenuCategory,
+              as: 'menuCategories',
+              attributes: ['categoryName'],
+            },
+          ],
         },
         {
           model: Restaurant,
@@ -471,13 +478,23 @@ exports.getOrdersForConsumer = async (req, res) => {
         },
       ],
     });
-
+ // Format response to include categoryName(s) at the top level of each order
+    const ordersWithCategory = orders.rows.map(order => {
+      const orderObj = order.toJSON();
+      const menuCategories = orderObj.menu && orderObj.menu.menuCategories
+        ? orderObj.menu.menuCategories.map(cat => cat.categoryName)
+        : [];
+      return {
+        ...orderObj,
+        categoryNames: menuCategories,
+      };
+    });
     res.status(200).json({
       message: 'Orders fetched successfully',
       totalOrders: orders.count,
       totalPages: Math.ceil(orders.count / limit),
       currentPage: parseInt(page),
-      orders: orders.rows,
+      orders: ordersWithCategory,
     });
   } catch (error) {
     console.error('Error fetching orders:', error);
