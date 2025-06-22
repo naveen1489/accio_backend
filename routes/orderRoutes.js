@@ -235,4 +235,66 @@ router.post('/complaint', authMiddleware, orderController.createComplaint);
  *         description: Internal server error
  */
 router.patch('/complaint/:complaintId/resolve', authMiddleware, orderController.updateComplaintStatus);
+
+/**
+ * @swagger
+ * /api/orders/complaints/restaurant:
+ *   get:
+ *     summary: Get complaints for the restaurant
+ *     tags: [Orders]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           default: 1
+ *         description: Page number for pagination
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 10
+ *         description: Number of complaints per page
+ *     responses:
+ *       200:
+ *         description: Complaints fetched successfully
+ *       404:
+ *         description: Restaurant not found
+ *       500:
+ *         description: Internal server error
+ */
+router.get('/complaints/restaurant', authMiddleware, orderController.getComplaintsByRestaurant);
+
+/**
+ * @swagger
+ * /api/orders/complaints/consumer:
+ *   get:
+ *     summary: Get complaints for the consumer
+ *     tags: [Orders]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           default: 1
+ *         description: Page number for pagination
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 10
+ *         description: Number of complaints per page
+ *     responses:
+ *       200:
+ *         description: Complaints fetched successfully
+ *       404:
+ *         description: Consumer not found
+ *       500:
+ *         description: Internal server error
+ */
+router.get('/complaints/consumer', authMiddleware, orderController.getComplaintsByConsumer);
 module.exports = router;

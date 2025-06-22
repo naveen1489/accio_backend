@@ -340,3 +340,77 @@ exports.updateComplaintStatus = async (req, res) => {
     res.status(500).json({ message: 'Internal server error', error });
   }
 };
+
+exports.getComplaintsByRestaurant = async (req, res) => {
+  try {
+    const userId = req.user.id; // Extract userId from JWT
+
+    // Fetch the restaurant associated with the userId
+    const restaurant = await Restaurant.findOne({ where: { userId } });
+    if (!restaurant) {
+      return res.status(404).json({ message: 'Restaurant not found for the user' });
+    }
+
+    const restaurantId = restaurant.id;
+
+    // Extract pagination parameters
+    const { page = 1, limit = 10 } = req.query;
+    const offset = (page - 1) * limit;
+
+    // Fetch complaints for the restaurant
+    const complaints = await Complaint.findAndCountAll({
+      where: { restaurantId },
+      limit: parseInt(limit),
+      offset: parseInt(offset),
+      order: [['createdAt', 'DESC']],
+    });
+
+    res.status(200).json({
+      message: 'Complaints fetched successfully',
+      totalComplaints: complaints.count,
+      totalPages: Math.ceil(complaints.count / limit),
+      currentPage: parseInt(page),
+      complaints: complaints.rows,
+    });
+  } catch (error) {
+    console.error('Error fetching complaints by restaurant:', error);
+    res.status(500).json({ message: 'Internal server error', error });
+  }
+};
+
+exports.getComplaintsByConsumer = async (req, res) => {
+  try {
+    const userId = req.user.id; // Extract userId from JWT
+
+    // Fetch the consumer associated with the userId
+    const consumer = await Consumer.findOne({ where: { userId } });
+    if (!consumer) {
+      return res.status(404).json({ message: 'Consumer not found for the user' });
+    }
+
+    const consumerId = consumer.id;
+
+    // Extract pagination parameters
+    const { page = 1, limit = 10 } = req.query;
+    const offset = (page - 1) * limit;
+
+    // Fetch complaints for the consumer
+    const complaints = await Complaint.findAndCountAll({
+      where: { consumerId },
+      limit: parseInt(limit),
+      offset: parseInt(offset),
+      order: [['createdAt', 'DESC']],
+    });
+
+    res.status(200).json({
+      message: 'Complaints fetched successfully',
+      totalComplaints: complaints.count,
+      totalPages: Math.ceil(complaints.count / limit),
+      currentPage: parseInt(page),
+      complaints: complaints.rows,
+    });
+  } catch (error) {
+    console.error('Error fetching complaints by consumer:', error);
+    res.status(500).json({ message: 'Internal server error', error });
+  }
+};
