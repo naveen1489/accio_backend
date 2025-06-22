@@ -380,6 +380,12 @@ exports.searchMenus = async (req, res) => {
     const menuCategoryInclude = {
       model: MenuCategory,
       as: 'menuCategories',
+       include: [
+        {
+          model: MenuItem,
+          as: 'menuItems',
+        },
+      ],
       required: !!category, // Only require join if filtering by category
       ...(category && {
         where: { categoryName: category }
