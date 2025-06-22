@@ -325,25 +325,33 @@ exports.updateSubscriptionStatus = async (req, res) => {
     if (status === 'approved') {
       const { startDate, endDate, mealFrequency, restaurantId, menuId, addressId } = subscription;
       const userId = subscription.consumerId; // Retrieve userId from the associated Consumer
-     console.log('User ID:', userId); // Debugging
+
       const orders = [];
       const currentDate = new Date(startDate);
 
+      // Determine allowed days based on mealFrequency
+      const allowedDays = mealFrequencyConfig[mealFrequency];
+      if (!allowedDays) {
+        return res.status(400).json({ message: `Invalid meal frequency: ${mealFrequency}` });
+      }
+
       while (currentDate <= new Date(endDate)) {
-        // Add orders based on meal frequency
-       // if (mealFrequency === 'daily' || (mealFrequency === 'alternate' && currentDate.getDate() % 2 === 0)) {
+        const dayOfWeek = currentDate.getDay(); // Get the day of the week (0 = Sunday, 1 = Monday, ..., 6 = Saturday)
+
+        // Create orders only for allowed days
+        if (allowedDays.includes(dayOfWeek)) {
           const orderNumber = Math.floor(1000000000000000 + Math.random() * 9000000000000000).toString(); // Generate random 16-digit number
           orders.push({
             subscriptionId: subscription.id,
             userId, // Set the userId correctly
             restaurantId,
             menuId,
-            addressId, 
-            orderDate: new Date(),
+            addressId,
+            orderDate: new Date(currentDate), // Use the current date in the iteration
             status: 'pending', // Default order status
             orderNumber, // Add the generated order number
           });
-      //  }
+        }
 
         // Increment the date by 1 day
         currentDate.setDate(currentDate.getDate() + 1);
