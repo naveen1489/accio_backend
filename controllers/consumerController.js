@@ -1,6 +1,6 @@
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-const {Order, User, Consumer, Address, Restaurant , Menu, MenuCategory } = require('../models');
+const {Order, User, Consumer, Address, Restaurant , Menu, MenuCategory, Subscription, MenuItem } = require('../models');
 const { Op } = require('sequelize');
 const haversine = require('haversine-distance'); // Use haversine-distance for distance calculation
 
@@ -380,6 +380,12 @@ exports.searchMenus = async (req, res) => {
     const menuCategoryInclude = {
       model: MenuCategory,
       as: 'menuCategories',
+       include: [
+        {
+          model: MenuItem,
+          as: 'menuItems',
+        },
+      ],
       required: !!category, // Only require join if filtering by category
       ...(category && {
         where: { categoryName: category }
@@ -463,19 +469,18 @@ exports.getOrdersForConsumer = async (req, res) => {
           model: Menu,
           as: 'menu',
           attributes: ['id', 'menuName', 'price', 'vegNonVeg'],
-          include: [
-            {
-              model: Subscription,
-              as: 'subscription',
-              attributes: ['id', 'categoryName'],
-            },
-          ],
         },
         {
           model: Restaurant,
           as: 'restaurant',
           attributes: ['id', 'name'],
         },
+        {
+              model: Subscription,
+              as: 'subscription',
+              attributes: ['id', 'categoryName'],
+        },
+    
       ],
     });
 
