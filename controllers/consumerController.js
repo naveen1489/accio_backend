@@ -463,23 +463,30 @@ exports.getOrdersForConsumer = async (req, res) => {
           model: Menu,
           as: 'menu',
           attributes: ['id', 'menuName', 'price', 'vegNonVeg'],
-          include: [
-            {
-              model: Subscription,
-              as: 'subscription',
-              attributes: ['id', 'categoryName'],
-            },
-          ],
         },
         {
           model: Restaurant,
           as: 'restaurant',
           attributes: ['id', 'name'],
         },
+        {
+              model: Subscription,
+              as: 'subscription',
+              attributes: ['id', 'categoryName'],
+        },
+    
       ],
     });
 
-  
+   // Add categoryName to each order in the response
+    const ordersWithCategory = orders.rows.map(order => {
+      const orderObj = order.toJSON();
+      return {
+        ...orderObj,
+        categoryName: orderObj.subscription ? orderObj.subscription.categoryName : null,
+      };
+    });
+    
     res.status(200).json({
       message: 'Orders fetched successfully',
       totalOrders: orders.count,
