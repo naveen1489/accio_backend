@@ -342,6 +342,7 @@ exports.searchMenus = async (req, res) => {
     console.log('Fetched restaurants count:', restaurants.length);
 
     // Filter restaurants within 5 km
+    const restaurantDistances = {};
     const nearbyRestaurants = restaurants.filter((restaurant) => {
       const restaurantLocation = {
         latitude: parseFloat(restaurant.latitude),
@@ -352,6 +353,7 @@ exports.searchMenus = async (req, res) => {
       console.log(
         `Restaurant ID: ${restaurant.id}, Distance: ${distance.toFixed(2)} km`
       );
+       restaurantDistances[restaurant.id] = distance;
       return distance <= 5;
     });
     const nearbyRestaurantIds = nearbyRestaurants.map((restaurant) => restaurant.id);
