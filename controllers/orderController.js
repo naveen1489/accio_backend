@@ -1,5 +1,5 @@
 const { Op } = require('sequelize');
-const { Order, Menu, Subscription, DeliveryPartner, Restaurant, Consumer, Address } = require('../models');
+const { Order, Menu, Subscription, DeliveryPartner, Restaurant, Consumer, Address, Complaint } = require('../models');
 
 
 // Get orders with filters
@@ -267,3 +267,76 @@ exports.getOrdersForDeliveryPartner = async (req, res) => {
       res.status(500).json({ message: 'Internal server error', error });
     }
   };
+
+ exports.createComplaint = async (req, res) => {
+  try {
+    const userId = req.user.id; // Extract userId from JWT
+    const { orderId, subscriptionId, menuId, restaurantId, complaintMessage, imageUrls } = req.body;
+
+    // Validate required fields
+    if (!orderId || !subscriptionId || !menuId || !restaurantId || !complaintMessage) {
+      return res.status(400).json({ message: 'All fields are required' });
+    }
+
+    // Fetch consumerId using userId
+    const consumer = await Consumer.findOne({ where: { userId } });
+    if (!consumer) {
+      return res.status(404).json({ message: 'Consumer not found for the given user' });
+    }
+    const consumerId = consumer.id;
+
+    // Create the complaint
+    const complaint = await Complaint.create({
+      orderId,
+      subscriptionId,
+      menuId,
+      restaurantId,
+      consumerId,
+      complaintMessage,
+      imageUrls, // Add image URLs
+      status: 'pending', // Default status
+    });
+
+    res.status(201).json({ message: 'Complaint created successfully', complaint });
+  } catch (error) {
+    console.error('Error creating complaint:', error);
+    res.status(500).json({ message: 'Internal server error', error });
+  }
+};
+
+exports.updateComplaintStatus = async (req, res) => {
+  try {
+    const userId = req.user.id; // Extract userId from JWT
+    const { complaintId } = req.params; // Complaint ID from URL
+    const { comment } = req.body; // Comment from request body
+
+    // Validate required fields
+    if (!comment) {
+      return res.status(400).json({ message: 'Comment is required' });
+    }
+
+    // Fetch the restaurant associated with the userId
+    const restaurant = await Restaurant.findOne({ where: { userId } });
+    if (!restaurant) {
+      return res.status(404).json({ message: 'Restaurant not found for the user' });
+    }
+
+    const restaurantId = restaurant.id;
+
+    // Find the complaint by ID and ensure it belongs to the restaurant
+    const complaint = await Complaint.findOne({ where: { id: complaintId, restaurantId } });
+    if (!complaint) {
+      return res.status(404).json({ message: 'Complaint not found or does not belong to the restaurant' });
+    }
+
+    // Update the complaint status and add the comment
+    complaint.status = 'resolved';
+    complaint.comment = comment;
+    await complaint.save();
+
+    res.status(200).json({ message: 'Complaint status updated successfully', complaint });
+  } catch (error) {
+    console.error('Error updating complaint status:', error);
+    res.status(500).json({ message: 'Internal server error', error });
+  }
+};
