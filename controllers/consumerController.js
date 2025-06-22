@@ -402,15 +402,17 @@ exports.searchMenus = async (req, res) => {
 
     console.log('Menus found:', menus.count);
 
-     // Add restaurantName to each menu in the response
+  // Add restaurantName and distance to each menu in the response
     const menusWithRestaurant = menus.rows.map(menu => {
       const menuObj = menu.toJSON();
+      const restaurant = menuObj.restaurant;
+      const distance = restaurant ? restaurantDistances[restaurant.id] : null;
       return {
         ...menuObj,
-        restaurantName: menuObj.restaurant ? menuObj.restaurant.name : null,
+        restaurantName: restaurant ? restaurant.name : null,
+        distance: distance !== undefined ? Number(distance.toFixed(2)) : null, // in km, rounded to 2 decimals
       };
     });
-
 
     res.status(200).json({
       message: 'Menus fetched successfully',
