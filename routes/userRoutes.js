@@ -299,4 +299,36 @@ router.post('/consumer/signup/verify-otp',authenticateToken, userController.veri
  */
 router.post('/reset-password', authenticateToken, userController.resetPassword);
 
+
+/**
+ * @swagger
+ * /api/admin/message:
+ *   post:
+ *     summary: Send a message to the admin
+ *     tags: [Admin]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               message:
+ *                 type: string
+ *                 description: The message to send
+ *               emailId:
+ *                 type: string
+ *                 description: Email ID of the sender
+ *           example:
+ *             message: "I need help with my subscription."
+ *             emailId: "user@example.com"
+ *     responses:
+ *       201:
+ *         description: Message sent successfully
+ *       400:
+ *         description: Missing required fields
+ *       500:
+ *         description: Internal server error
+ */
+router.post('/admin/message', authenticateToken, userController.sendMessageToAdmin);
 module.exports = router;

@@ -121,7 +121,7 @@ exports.updateMenu = async (req, res) => {
   console.log("Updating menu with body:", JSON.stringify(req.body, null, 2));
   try {
     const { id } = req.params;
-    const { menuName, vegNonVeg, menuCategories, price, restaurantId, discount } = req.body;
+    const { menuName, vegNonVeg, menuCategories, price, restaurantId, discount, description } = req.body;
 
     // Validate input data
     if (!menuName || !price || !restaurantId) {
@@ -138,6 +138,7 @@ exports.updateMenu = async (req, res) => {
     menu.menuName = menuName || menu.menuName;
     menu.vegNonVeg = vegNonVeg || menu.vegNonVeg;
     menu.price = price || menu.price;
+    menu.description = description || menu.description; // Ensure description is updated
 
     // Set status to "Pending"
     menu.status = "Pending";

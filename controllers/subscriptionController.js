@@ -325,25 +325,33 @@ exports.updateSubscriptionStatus = async (req, res) => {
     if (status === 'approved') {
       const { startDate, endDate, mealFrequency, restaurantId, menuId, addressId } = subscription;
       const userId = subscription.consumerId; // Retrieve userId from the associated Consumer
-     console.log('User ID:', userId); // Debugging
+
       const orders = [];
       const currentDate = new Date(startDate);
 
+      // Determine allowed days based on mealFrequency
+      const allowedDays = mealFrequencyConfig[mealFrequency];
+      if (!allowedDays) {
+        return res.status(400).json({ message: `Invalid meal frequency: ${mealFrequency}` });
+      }
+
       while (currentDate <= new Date(endDate)) {
-        // Add orders based on meal frequency
-       // if (mealFrequency === 'daily' || (mealFrequency === 'alternate' && currentDate.getDate() % 2 === 0)) {
+        const dayOfWeek = currentDate.getDay(); // Get the day of the week (0 = Sunday, 1 = Monday, ..., 6 = Saturday)
+
+        // Create orders only for allowed days
+        if (allowedDays.includes(dayOfWeek)) {
           const orderNumber = Math.floor(1000000000000000 + Math.random() * 9000000000000000).toString(); // Generate random 16-digit number
           orders.push({
             subscriptionId: subscription.id,
             userId, // Set the userId correctly
             restaurantId,
             menuId,
-            addressId, 
-            orderDate: new Date(),
+            addressId,
+            orderDate: new Date(currentDate), // Use the current date in the iteration
             status: 'pending', // Default order status
             orderNumber, // Add the generated order number
           });
-      //  }
+        }
 
         // Increment the date by 1 day
         currentDate.setDate(currentDate.getDate() + 1);
@@ -363,18 +371,17 @@ exports.updateSubscriptionStatus = async (req, res) => {
 exports.pauseSubscription = async (req, res) => {
   try {
     const { id } = req.params; // Subscription ID
-    const { pauseStartDate, pauseEndDate } = req.body; // Pause start and end dates
+    const { pausedDates } = req.body; // Array of dates to be paused
 
-    // Validate the pause dates
-    if (!pauseStartDate || !pauseEndDate) {
-      return res.status(400).json({ message: 'Pause start and end dates are required' });
+    // Validate the pausedDates array
+    if (!pausedDates || !Array.isArray(pausedDates) || pausedDates.length === 0) {
+      return res.status(400).json({ message: 'An array of paused dates is required' });
     }
 
-    const startDate = new Date(pauseStartDate);
-    const endDate = new Date(pauseEndDate);
-
-    if (startDate >= endDate) {
-      return res.status(400).json({ message: 'Pause end date must be after the start date' });
+    // Convert pausedDates to Date objects and validate each date
+    const validDates = pausedDates.map(date => new Date(date)).filter(date => !isNaN(date));
+    if (validDates.length !== pausedDates.length) {
+      return res.status(400).json({ message: 'Invalid dates provided in the array' });
     }
 
     // Find the subscription by ID
@@ -383,27 +390,31 @@ exports.pauseSubscription = async (req, res) => {
       return res.status(404).json({ message: 'Subscription not found' });
     }
 
-    // Check if the subscription is already paused or cancelled
-    if (subscription.status === 'paused') {
-      return res.status(400).json({ message: 'Subscription is already paused' });
-    }
-    if (subscription.status === 'cancelled') {
-      return res.status(400).json({ message: 'Cannot pause a cancelled subscription' });
+    const { mealFrequency, endDate } = subscription;
+
+    // Determine allowed days based on mealFrequency
+    const allowedDays = mealFrequencyConfig[mealFrequency];
+    if (!allowedDays) {
+      return res.status(400).json({ message: `Invalid meal frequency: ${mealFrequency}` });
     }
 
-    // Calculate the number of paused days
-    const pausedDays = Math.ceil((endDate - startDate) / (1000 * 60 * 60 * 24)); // Difference in days
+    // Filter pausedDates to include only valid delivery days
+    const pausedDeliveryDays = validDates.filter(date => allowedDays.includes(date.getDay()));
 
-    // Update the subscription status to paused and adjust the end date
-    subscription.status = 'paused';
-    subscription.endDate = new Date(new Date(subscription.endDate).getTime() + pausedDays * 24 * 60 * 60 * 1000); // Extend endDate
-    subscription.pausedAt = startDate; // Save the pause start date
-    subscription.pauseEndDate = endDate; // Save the pause end date
+    // Calculate the number of paused delivery days
+    const pausedDaysCount = pausedDeliveryDays.length;
+
+    // Update the subscription end date based on paused delivery days
+    subscription.endDate = new Date(new Date(endDate).getTime() + pausedDaysCount * 24 * 60 * 60 * 1000); // Extend endDate
+    subscription.pausedDates = pausedDeliveryDays; // Save the array of paused delivery days
     await subscription.save();
 
-    res.status(200).json({ message: 'Subscription paused successfully', subscription });
+    res.status(200).json({
+      message: 'Subscription end date updated successfully based on paused dates',
+      subscription,
+    });
   } catch (error) {
-    console.error('Error pausing subscription:', error);
+    console.error('Error updating subscription end date:', error);
     res.status(500).json({ message: 'Internal server error', error });
   }
 };

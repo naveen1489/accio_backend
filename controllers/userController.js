@@ -2,7 +2,7 @@
 
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-const { User, OTP, Consumer } = require('../models');
+const { User, OTP, Consumer, AdminMessage } = require('../models');
 
 // Register Admin
 exports.registerAdmin = async (req, res) => {
@@ -342,3 +342,49 @@ exports.loginRestaurant = async (req, res) => {
       res.status(500).json({ message: 'Internal server error', error });
     }
   };
+
+  exports.sendMessageToAdmin = async (req, res) => {
+  try {
+    const userId = req.user.id; // Extract userId from JWT
+    const { message, emailId } = req.body;
+
+    // Validate required fields
+    if (!message || !emailId) {
+      return res.status(400).json({ message: 'Message and emailId are required' });
+    }
+
+    // Determine user role and fetch name accordingly
+    const userRole = req.user.role; // Assuming role is set in JWT
+    let name;
+
+    if (userRole === 'restaurant') {
+      const restaurant = await Restaurant.findOne({ where: { userId } });
+      if (!restaurant) {
+        return res.status(404).json({ message: 'Restaurant not found for the user' });
+      }
+      name = restaurant.name; // Fetch name from Restaurant table
+    } else if (userRole === 'consumer') {
+      const consumer = await Consumer.findOne({ where: { userId } });
+      if (!consumer) {
+        return res.status(404).json({ message: 'Consumer not found for the user' });
+      }
+      name = consumer.name; // Fetch name from Consumer table
+    } else {
+      return res.status(400).json({ message: 'Invalid user role' });
+    }
+
+    // Save the message to the database (assuming AdminMessage model exists)
+    const adminMessage = await AdminMessage.create({
+      userId,
+      message,
+      emailId,
+      userRole,
+      name,
+    });
+
+    res.status(201).json({ message: 'Message sent to admin successfully', adminMessage });
+  } catch (error) {
+    console.error('Error sending message to admin:', error);
+    res.status(500).json({ message: 'Internal server error', error });
+  }
+};
