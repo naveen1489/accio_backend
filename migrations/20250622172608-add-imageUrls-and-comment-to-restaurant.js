@@ -2,18 +2,20 @@
 
 module.exports = {
   up: async (queryInterface, Sequelize) => {
-    await queryInterface.addColumn('Restaurants', 'imageUrls', {
+    // Add fields to the Complaint table
+    await queryInterface.addColumn('Complaints', 'imageUrls', {
       type: Sequelize.JSON,
       allowNull: true,
     });
-    await queryInterface.addColumn('Restaurants', 'comment', {
+    await queryInterface.addColumn('Complaints', 'comment', {
       type: Sequelize.TEXT,
       allowNull: true,
     });
   },
 
   down: async (queryInterface, Sequelize) => {
-    await queryInterface.removeColumn('Restaurants', 'imageUrls');
-    await queryInterface.removeColumn('Restaurants', 'comment');
+    // Remove fields from the Complaint table
+    await queryInterface.removeColumn('Complaints', 'imageUrls');
+    await queryInterface.removeColumn('Complaints', 'comment');
   },
 };
