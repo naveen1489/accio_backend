@@ -1,5 +1,5 @@
 const { Op } = require('sequelize');
-const { Order, Menu, Subscription, DeliveryPartner, Restaurant, Consumer, Address, Complaint } = require('../models');
+const { Order, Menu, Subscription, DeliveryPartner, Restaurant, Consumer, Address, Complaint, MenuItem, MenuCategory } = require('../models');
 
 
 // Get orders with filters
@@ -375,9 +375,16 @@ exports.getComplaintsByRestaurant = async (req, res) => {
           attributes: ['id', 'menuName'], // Include menu name
           include: [
             {
-              model: MenuItem,
-              as: 'menuItems',
-              attributes: ['id', 'itemName', 'itemCategory'], // Include menu items
+              model: MenuCategory,
+              as: 'menuCategories',
+              attributes: ['id', 'categoryName'], // Include menu category
+              include: [
+                {
+                  model: MenuItem,
+                  as: 'menuItems',
+                  attributes: ['id', 'itemName', 'itemCategory'], // Include menu items
+                },
+              ],
             },
           ],
         },
@@ -430,10 +437,17 @@ exports.getComplaintsByConsumer = async (req, res) => {
           as: 'menu',
           attributes: ['id', 'menuName'], // Include menu name
           include: [
-            {
-              model: MenuItem,
-              as: 'menuItems',
-              attributes: ['id', 'itemName', 'itemCategory'], // Include menu items
+             {
+              model: MenuCategory,
+              as: 'menuCategories',
+              attributes: ['id', 'categoryName'], // Include menu category
+              include: [
+                {
+                  model: MenuItem,
+                  as: 'menuItems',
+                  attributes: ['id', 'itemName', 'itemCategory'], // Include menu items
+                },
+              ],
             },
           ],
         },
