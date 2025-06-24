@@ -492,15 +492,21 @@ exports.updateCloseDates = async (req, res) => {
 
 const markOrdersAsCanceled = async (restaurantId, closeStartDate, closeEndDate) => {
   try {
+    // Convert closeStartDate and closeEndDate to the database timezone
     const startDate = new Date(closeStartDate);
+    startDate.setHours(0, 0, 0, 0); // Normalize time to 00:00:00
+
     const endDate = new Date(closeEndDate);
+    endDate.setHours(23, 59, 59, 999); // Normalize time to 23:59:59
+
+    console.log(`Marking orders as canceled for restaurantId: ${restaurantId}, startDate: ${startDate}, endDate: ${endDate}`);
 
     // Find and update orders within the close date range
-    await Order.update(
+    const result = await Order.update(
       { status: 'cancelled' },
       {
         where: {
-          restaurantId : restaurantId,
+          restaurantId: restaurantId,
           orderDate: {
             [Op.between]: [startDate, endDate],
           },
@@ -508,7 +514,7 @@ const markOrdersAsCanceled = async (restaurantId, closeStartDate, closeEndDate) 
       }
     );
 
-    console.log(`Orders for restaurant ${restaurantId} between ${closeStartDate} and ${closeEndDate} marked as canceled.`);
+    console.log(`Number of orders updated: ${result}`);
   } catch (error) {
     console.error('Error marking orders as canceled:', error);
     throw error;
