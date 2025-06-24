@@ -494,17 +494,7 @@ const markOrdersAsCanceled = async (restaurantId, closeStartDate, closeEndDate) 
   try {
     const startDate = new Date(closeStartDate);
     const endDate = new Date(closeEndDate);
-
-    const ordersToCancel = await Order.findAll({
-  where: {
-    restaurantId: restaurantId,
-    orderDate: {
-      [Op.between]: [startDate, endDate],
-    },
-  },
-});
-
-console.log(`Orders to cancel:`, ordersToCancel);
+    
     // Find and update orders within the close date range
     await Order.update(
       { status: 'cancelled' },

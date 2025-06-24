@@ -341,13 +341,16 @@ exports.updateSubscriptionStatus = async (req, res) => {
         // Create orders only for allowed days
         if (allowedDays.includes(dayOfWeek)) {
           const orderNumber = Math.floor(1000000000000000 + Math.random() * 9000000000000000).toString(); // Generate random 16-digit number
+          // Normalize the date to only include the date component
+      const normalizedDate = new Date(currentDate);
+      normalizedDate.setHours(0, 0, 0, 0); // Set time to 00:00:00
           orders.push({
             subscriptionId: subscription.id,
             userId, // Set the userId correctly
             restaurantId,
             menuId,
             addressId,
-            orderDate: new Date(currentDate), // Use the current date in the iteration
+            orderDate: normalizedDate, // Use the current date in the iteration
             status: 'pending', // Default order status
             orderNumber, // Add the generated order number
           });
