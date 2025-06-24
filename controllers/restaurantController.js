@@ -563,6 +563,8 @@ const createOrdersForExtendedDays = async (restaurantId, closeStartDate, closeEn
       while (currentDate <= newEndDate) {
         const dayOfWeek = currentDate.getDay();
         if (allowedDays.includes(dayOfWeek)) {
+           const orderNumber = Math.floor(1000000000000000 + Math.random() * 9000000000000000).toString(); // Generate random 16-digit order number
+          
           newOrders.push({
             subscriptionId: subscription.id,
             restaurantId,
@@ -571,6 +573,7 @@ const createOrdersForExtendedDays = async (restaurantId, closeStartDate, closeEn
             userId: consumerId,
             orderDate: new Date(currentDate),
             status: 'pending',
+            orderNumber: orderNumber, // Use the generated order number
           });
         }
         currentDate.setDate(currentDate.getDate() + 1);
