@@ -494,7 +494,7 @@ const markOrdersAsCanceled = async (restaurantId, closeStartDate, closeEndDate) 
   try {
     const startDate = new Date(closeStartDate);
     const endDate = new Date(closeEndDate);
-    
+
     // Find and update orders within the close date range
     await Order.update(
       { status: 'cancelled' },
@@ -556,27 +556,31 @@ const createOrdersForExtendedDays = async (restaurantId, closeStartDate, closeEn
       }
 
       // Create new orders for the extended days
-      const currentDate = new Date(endDate);
-      const newEndDate = new Date(new Date(endDate).getTime() + canceledDaysCount * 24 * 60 * 60 * 1000);
+      const currentDate = new Date(endDate); // Start from the subscription's original end date
+      currentDate.setHours(0, 0, 0, 0); // Normalize time to 00:00:00
+
+      const newEndDate = new Date(endDate.getTime() + canceledDaysCount * 24 * 60 * 60 * 1000);
+      newEndDate.setHours(0, 0, 0, 0); // Normalize time to 00:00:00
+
       const newOrders = [];
 
-      while (currentDate <= newEndDate) {
+      while (currentDate < newEndDate) { // Use `<` instead of `<=` to avoid duplicate orders
         const dayOfWeek = currentDate.getDay();
         if (allowedDays.includes(dayOfWeek)) {
-           const orderNumber = Math.floor(1000000000000000 + Math.random() * 9000000000000000).toString(); // Generate random 16-digit order number
-          
+          const orderNumber = Math.floor(1000000000000000 + Math.random() * 9000000000000000).toString(); // Generate random 16-digit order number
+
           newOrders.push({
             subscriptionId: subscription.id,
             restaurantId,
             menuId,
             addressId,
             userId: consumerId,
-            orderDate: new Date(currentDate),
+            orderDate: new Date(currentDate), // Use normalized date
             status: 'pending',
-            orderNumber: orderNumber, // Use the generated order number
+            orderNumber, // Use the generated order number
           });
         }
-        currentDate.setDate(currentDate.getDate() + 1);
+        currentDate.setDate(currentDate.getDate() + 1); // Move to the next day
       }
 
       await Order.bulkCreate(newOrders);
