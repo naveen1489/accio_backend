@@ -5,6 +5,7 @@ const transporter = require('../services/emailService');
 const { User } = require('../models'); // Import the User model
 const crypto = require('crypto'); // For generating random password
 const bcrypt = require('bcryptjs'); // Import bcrypt for password hashing
+const { Op } = require('sequelize');
 
 const mealPlanConfig = {
   '1 Week': 7,
