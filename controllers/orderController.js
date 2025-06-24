@@ -451,6 +451,11 @@ exports.getComplaintsByConsumer = async (req, res) => {
             },
           ],
         },
+        {
+          model: Restaurant,
+          as: 'restaurant',
+          attributes: ['id', 'name'], // Include restaurant name
+        },
       ],
     });
 
