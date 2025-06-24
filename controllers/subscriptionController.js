@@ -282,6 +282,9 @@ exports.getSubscriptionById = async (req, res) => {
         { model: Consumer, as: 'customer' },
         { model: Restaurant, as: 'restaurant' },
         { model: Menu, as: 'menu' },
+         {
+          model: Address,
+          as: 'address'     },
       ],
     });
 
