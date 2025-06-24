@@ -1,6 +1,6 @@
 'use strict';
 
-const { Restaurant, sequelize ,Subscription} = require('../models');
+const { Restaurant, sequelize ,Subscription, Order} = require('../models');
 const transporter = require('../services/emailService');
 const { User } = require('../models'); // Import the User model
 const crypto = require('crypto'); // For generating random password
