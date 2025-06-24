@@ -497,7 +497,7 @@ const markOrdersAsCanceled = async (restaurantId, closeStartDate, closeEndDate) 
 
     // Find and update orders within the close date range
     await Order.update(
-      { status: 'canceled' },
+      { status: 'cancelled' },
       {
         where: {
           restaurantId,
