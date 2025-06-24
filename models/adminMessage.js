@@ -2,9 +2,13 @@
 module.exports = (sequelize, DataTypes) => {
   const AdminMessage = sequelize.define(
     'AdminMessage',
-    {
+    {id: {
+        type: DataTypes.UUID,
+        defaultValue: DataTypes.UUIDV4,
+        primaryKey: true,
+      },
       userId: {
-        type: DataTypes.INTEGER,
+        type: DataTypes.UUIDV4,
         allowNull: false,
       },
       message: {
