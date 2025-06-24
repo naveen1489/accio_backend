@@ -500,7 +500,7 @@ const markOrdersAsCanceled = async (restaurantId, closeStartDate, closeEndDate) 
       { status: 'cancelled' },
       {
         where: {
-          restaurantId,
+          restaurantId : restaurantId,
           orderDate: {
             [Op.between]: [startDate, endDate],
           },
@@ -546,7 +546,7 @@ const createOrdersForExtendedDays = async (restaurantId, closeStartDate, closeEn
     const canceledDaysCount = Math.ceil((endDate - startDate) / (1000 * 60 * 60 * 24)) + 1;
 
     for (const subscription of subscriptions) {
-      const { mealFrequency, endDate, menuId, addressId } = subscription;
+      const { mealFrequency, endDate, menuId, addressId, consumerId } = subscription;
 
       // Determine allowed days based on meal frequency
       const allowedDays = mealFrequencyConfig[mealFrequency];
@@ -568,6 +568,7 @@ const createOrdersForExtendedDays = async (restaurantId, closeStartDate, closeEn
             restaurantId,
             menuId,
             addressId,
+            userId: consumerId,
             orderDate: new Date(currentDate),
             status: 'pending',
           });
