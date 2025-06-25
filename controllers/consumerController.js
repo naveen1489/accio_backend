@@ -37,7 +37,7 @@ exports.createConsumer = async (req, res) => {
       mobile,
       email,
       profilePic,
-      status: 'pending', // Default status
+      status: 'inactive', // Default status
     });
 
     res.status(201).json({ message: 'Consumer created successfully', consumer });
@@ -63,7 +63,16 @@ exports.loginConsumer = async (req, res) => {
     if (!isPasswordValid) {
       return res.status(400).json({ message: 'Invalid password' });
     }
+ // Find the consumer associated with the user
+    const consumer = await Consumer.findOne({ where: { userId: user.id } });
+    if (!consumer) {
+      return res.status(404).json({ message: 'Consumer not found' });
+    }
 
+    // Check the consumer's status
+    if (consumer.status === 'inactive') {
+      return res.status(409).json({ message: 'Account is inactive. Please verify your account.' });
+    }
     // Generate a JWT token
     const token = jwt.sign(
       { id: user.id, username: user.username, role: user.role },
@@ -354,7 +363,7 @@ exports.searchMenus = async (req, res) => {
         `Restaurant ID: ${restaurant.id}, Distance: ${distance.toFixed(2)} km`
       );
        restaurantDistances[restaurant.id] = distance;
-      return distance <= 5;
+      return distance <= 20;
     });
     const nearbyRestaurantIds = nearbyRestaurants.map((restaurant) => restaurant.id);
     console.log('Nearby restaurant IDs:', nearbyRestaurantIds);

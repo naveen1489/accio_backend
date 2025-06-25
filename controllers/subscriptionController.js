@@ -1,7 +1,7 @@
 'use strict';
 
 const { Subscription, Order, Restaurant, Menu, User , Consumer, Address, Notification,  Discount} = require('../models');
-
+const { Op } = require('sequelize');
 
 const mealPlanConfig = {
   '1 Week': 7,
@@ -434,13 +434,19 @@ exports.pauseSubscription = async (req, res) => {
 
 const markOrdersAsCanceled = async (subscriptionId, pausedDeliveryDays) => {
   try {
+     // Normalize pausedDeliveryDays to match the database format
+    const normalizedPausedDays = pausedDeliveryDays.map(date => {
+      const normalizedDate = new Date(date);
+      normalizedDate.setHours(0, 0, 0, 0); // Set time to 00:00:00
+      return normalizedDate;
+    });
     await Order.update(
       { status: 'cancelled' },
       {
         where: {
           subscriptionId,
           orderDate: {
-            [Op.in]: pausedDeliveryDays,
+            [Op.in]: normalizedPausedDays,
           },
         },
       }
