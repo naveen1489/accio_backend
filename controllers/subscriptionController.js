@@ -282,6 +282,9 @@ exports.getSubscriptionById = async (req, res) => {
         { model: Consumer, as: 'customer' },
         { model: Restaurant, as: 'restaurant' },
         { model: Menu, as: 'menu' },
+         {
+          model: Address,
+          as: 'address'     },
       ],
     });
 
@@ -341,13 +344,16 @@ exports.updateSubscriptionStatus = async (req, res) => {
         // Create orders only for allowed days
         if (allowedDays.includes(dayOfWeek)) {
           const orderNumber = Math.floor(1000000000000000 + Math.random() * 9000000000000000).toString(); // Generate random 16-digit number
+          // Normalize the date to only include the date component
+      const normalizedDate = new Date(currentDate);
+      normalizedDate.setHours(0, 0, 0, 0); // Set time to 00:00:00
           orders.push({
             subscriptionId: subscription.id,
             userId, // Set the userId correctly
             restaurantId,
             menuId,
             addressId,
-            orderDate: new Date(currentDate), // Use the current date in the iteration
+            orderDate: normalizedDate, // Use the current date in the iteration
             status: 'pending', // Default order status
             orderNumber, // Add the generated order number
           });
@@ -401,6 +407,10 @@ exports.pauseSubscription = async (req, res) => {
     // Filter pausedDates to include only valid delivery days
     const pausedDeliveryDays = validDates.filter(date => allowedDays.includes(date.getDay()));
 
+// Mark orders for paused days as canceled
+    await markOrdersAsCanceled(subscription.id, pausedDeliveryDays);
+
+
     // Calculate the number of paused delivery days
     const pausedDaysCount = pausedDeliveryDays.length;
 
@@ -408,6 +418,8 @@ exports.pauseSubscription = async (req, res) => {
     subscription.endDate = new Date(new Date(endDate).getTime() + pausedDaysCount * 24 * 60 * 60 * 1000); // Extend endDate
     subscription.pausedDates = pausedDeliveryDays; // Save the array of paused delivery days
     await subscription.save();
+// Create new orders for the extended days
+    await createOrdersForExtendedDays(subscription, pausedDaysCount);
 
     res.status(200).json({
       message: 'Subscription end date updated successfully based on paused dates',
@@ -418,6 +430,71 @@ exports.pauseSubscription = async (req, res) => {
     res.status(500).json({ message: 'Internal server error', error });
   }
 };
+
+
+const markOrdersAsCanceled = async (subscriptionId, pausedDeliveryDays) => {
+  try {
+    await Order.update(
+      { status: 'cancelled' },
+      {
+        where: {
+          subscriptionId,
+          orderDate: {
+            [Op.in]: pausedDeliveryDays,
+          },
+        },
+      }
+    );
+
+    console.log(`Orders for subscription ${subscriptionId} on paused days marked as canceled.`);
+  } catch (error) {
+    console.error('Error marking orders as canceled:', error);
+    throw error;
+  }
+};
+
+const createOrdersForExtendedDays = async (subscription, pausedDaysCount) => {
+  try {
+    const { mealFrequency, endDate, restaurantId, menuId, addressId, consumerId } = subscription;
+
+    // Determine allowed days based on meal frequency
+    const allowedDays = mealFrequencyConfig[mealFrequency];
+    if (!allowedDays) {
+      throw new Error(`Invalid meal frequency: ${mealFrequency}`);
+    }
+
+    // Create new orders for the extended days
+    const currentDate = new Date(endDate);
+    const newEndDate = new Date(new Date(endDate).getTime() + pausedDaysCount * 24 * 60 * 60 * 1000);
+    const newOrders = [];
+
+    while (currentDate <= newEndDate) {
+      const dayOfWeek = currentDate.getDay();
+      if (allowedDays.includes(dayOfWeek)) {
+        const orderNumber = Math.floor(1000000000000000 + Math.random() * 9000000000000000).toString(); // Generate random 16-digit order number
+
+        newOrders.push({
+          subscriptionId: subscription.id,
+          userId: consumerId,
+          restaurantId,
+          menuId,
+          addressId,
+          orderDate: new Date(currentDate),
+          status: 'pending',
+          orderNumber,
+        });
+      }
+      currentDate.setDate(currentDate.getDate() + 1);
+    }
+
+    await Order.bulkCreate(newOrders);
+    console.log(`Created ${newOrders.length} new orders for subscription ${subscription.id}.`);
+  } catch (error) {
+    console.error('Error creating orders for extended days:', error);
+    throw error;
+  }
+};
+
 
 exports.resumeSubscription = async (req, res) => {
   try {
