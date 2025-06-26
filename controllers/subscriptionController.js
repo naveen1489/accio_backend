@@ -2,19 +2,8 @@
 
 const { Subscription, Order, Restaurant, Menu, User , Consumer, Address, Notification,  Discount} = require('../models');
 const { Op } = require('sequelize');
+const { mealPlanConfig, mealFrequencyConfig } = require('../config/applicationConfig');
 
-const mealPlanConfig = {
-  '1 Week': 7,
-  '2 Week': 14,
-  '3 Week': 21,
-  '4 Week': 28,
-};
-
-const mealFrequencyConfig = {
-  'Mon-Fri': [1, 2, 3, 4, 5], // Monday to Friday
-  'Mon-Sat': [1, 2, 3, 4, 5, 6], // Monday to Saturday
-  'Mon-Sun': [1, 2, 3, 4, 5, 6, 7], // All days of the week
-};
 
 const calculateNumberOfOrders = (mealPlan, mealFrequency) => {
   // Get the total number of days from the meal plan
@@ -111,6 +100,8 @@ exports.createSubscription = async (req, res) => {
 
     // Calculate the payment amount
     const paymentAmount = calculatePaymentAmount(numberOfOrders, adjustedMenuPrice);
+    
+    const adjustedEndDate = adjustSubscriptionEndDate(startDate, endDate, restaurant.closeStartDate, restaurant.closeEndDate);
 
     // Create the subscription
     const subscription = await Subscription.create({
@@ -121,7 +112,7 @@ exports.createSubscription = async (req, res) => {
       mealPlan,
       mealFrequency,
       startDate,
-      endDate,
+      endDate : adjustedEndDate,
       addressId,
       paymentAmount, // Set the calculated payment amount
       status: 'pending', // Default status
@@ -149,6 +140,31 @@ exports.createSubscription = async (req, res) => {
     console.error('Error creating subscription:', error);
     res.status(500).json({ message: 'Internal server error', error });
   }
+};
+const adjustSubscriptionEndDate = (startDate, endDate, closeStartDate, closeEndDate) => {
+  // Convert dates to Date objects
+  const subscriptionStart = new Date(startDate);
+  const subscriptionEnd = new Date(endDate);
+  const closeStart = new Date(closeStartDate);
+  const closeEnd = new Date(closeEndDate);
+
+  // Check if the restaurant's close days overlap with the subscription period
+  if (
+    (closeStart >= subscriptionStart && closeStart <= subscriptionEnd) ||
+    (closeEnd >= subscriptionStart && closeEnd <= subscriptionEnd)
+  ) {
+    const overlapStart = Math.max(closeStart.getTime(), subscriptionStart.getTime());
+    const overlapEnd = Math.min(closeEnd.getTime(), subscriptionEnd.getTime());
+
+    // Calculate the number of overlapping close days
+    const closeDaysCount = Math.ceil((overlapEnd - overlapStart) / (1000 * 60 * 60 * 24)) + 1;
+
+    // Extend the subscription end date by the number of close days
+    return new Date(subscriptionEnd.getTime() + closeDaysCount * 24 * 60 * 60 * 1000);
+  }
+
+  // Return the original end date if no overlap
+  return subscriptionEnd;
 };
 
 exports.updateSubscription = async (req, res) => {
