@@ -3,6 +3,7 @@ const jwt = require('jsonwebtoken');
 const {Order, User, Consumer, Address, Restaurant , Menu, MenuCategory, Subscription, MenuItem } = require('../models');
 const { Op } = require('sequelize');
 const haversine = require('haversine-distance'); // Use haversine-distance for distance calculation
+const { distanceThreshold } = require('../config/applicationConfig');
 
 // Create consumer
 exports.createConsumer = async (req, res) => {
@@ -218,8 +219,9 @@ exports.getAddressesByConsumerId = async (req, res) => {
     // Fetch addresses for the consumer
     const addresses = await Address.findAll({ where: { consumerId: consumer.id } });
 
+    // Return an empty array if no addresses are found
     if (!addresses || addresses.length === 0) {
-      return res.status(404).json({ message: 'No addresses found for this consumer' });
+      return res.status(200).json({ message: 'No addresses found for this consumer', addresses: [] });
     }
 
     res.status(200).json({ addresses });
@@ -311,7 +313,7 @@ exports.updateCurrentAddress = async (req, res) => {
   }
 };
 
-exports.searchMenus = async (req, res) => {
+exports.searchMenusOld = async (req, res) => {
   try {
     const userId = req.user.id;
     const { category, vegNonVeg, minPrice, maxPrice, page = 1 } = req.query;
@@ -363,7 +365,7 @@ exports.searchMenus = async (req, res) => {
         `Restaurant ID: ${restaurant.id}, Distance: ${distance.toFixed(2)} km`
       );
        restaurantDistances[restaurant.id] = distance;
-      return distance <= 20;
+      return distance <= distanceThreshold;
     });
     const nearbyRestaurantIds = nearbyRestaurants.map((restaurant) => restaurant.id);
     console.log('Nearby restaurant IDs:', nearbyRestaurantIds);
@@ -444,6 +446,149 @@ exports.searchMenus = async (req, res) => {
   }
 };
 
+const getConsumerCurrentAddress = async (userId) => {
+  const consumer = await Consumer.findOne({ where: { userId } });
+  if (!consumer || !consumer.currentAddressId) {
+    throw new Error('Consumer or current address not found');
+  }
+
+  const currentAddress = await Address.findByPk(consumer.currentAddressId);
+  if (!currentAddress) {
+    throw new Error('Current address not found');
+  }
+
+  return {
+    latitude: parseFloat(currentAddress.latitude),
+    longitude: parseFloat(currentAddress.longitude),
+  };
+};
+const filterNearbyRestaurants = (currentLocation, restaurants, distanceThreshold) => {
+  const restaurantDistances = {};
+  const nearbyRestaurants = restaurants.filter((restaurant) => {
+    const restaurantLocation = {
+      latitude: parseFloat(restaurant.latitude),
+      longitude: parseFloat(restaurant.longitude),
+    };
+    const distance = haversine(currentLocation, restaurantLocation) / 1000; // km
+    restaurantDistances[restaurant.id] = distance;
+    return distance <= distanceThreshold;
+  });
+
+  return { nearbyRestaurants, restaurantDistances };
+};
+
+const buildMenuFilters = (nearbyRestaurantIds, vegNonVeg, minPrice, maxPrice) => {
+  const menuWhere = {
+    restaurantId: { [Op.in]: nearbyRestaurantIds },
+    status: 'Approved',
+  };
+
+  if (vegNonVeg) menuWhere.vegNonVeg = vegNonVeg;
+  if (minPrice) menuWhere.price = { ...(menuWhere.price || {}), [Op.gte]: parseFloat(minPrice) };
+  if (maxPrice) menuWhere.price = { ...(menuWhere.price || {}), [Op.lte]: parseFloat(maxPrice) };
+
+  return menuWhere;
+};
+
+const formatMenusWithRestaurantInfo = (menus, restaurantDistances) => {
+  return menus.rows.map((menu) => {
+    const menuObj = menu.toJSON();
+    const restaurant = menuObj.restaurant;
+    const distance = restaurant ? restaurantDistances[restaurant.id] : null;
+    return {
+      ...menuObj,
+      restaurantName: restaurant ? restaurant.name : null,
+      distance: distance !== undefined ? Number(distance.toFixed(2)) : null, // in km, rounded to 2 decimals
+    };
+  });
+};
+exports.searchMenus = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { category, vegNonVeg, minPrice, maxPrice, page = 1 } = req.query;
+
+    console.log('--- searchMenus called ---');
+    console.log('userId from JWT:', userId);
+    console.log('Query params:', req.query);
+
+    // Step 1: Get consumer's current location
+    const currentLocation = await getConsumerCurrentAddress(userId);
+    console.log('Current Location:', currentLocation);
+
+    // Step 2: Fetch all active restaurants
+    const restaurants = await Restaurant.findAll({
+      where: { status: 'Active' },
+      attributes: ['id', 'latitude', 'longitude'],
+    });
+    console.log('Fetched restaurants count:', restaurants.length);
+
+    // Step 3: Filter nearby restaurants
+    const { nearbyRestaurants, restaurantDistances } = filterNearbyRestaurants(
+      currentLocation,
+      restaurants,
+      distanceThreshold
+    );
+    const nearbyRestaurantIds = nearbyRestaurants.map((restaurant) => restaurant.id);
+    console.log('Nearby restaurant IDs:', nearbyRestaurantIds);
+
+    if (nearbyRestaurantIds.length === 0) {
+      console.log('No restaurants found within 5 km');
+      return res.status(200).json({ message: 'No restaurants found within 5 km', menus: [] });
+    }
+
+    // Step 4: Build menu filters
+    const menuWhere = buildMenuFilters(nearbyRestaurantIds, vegNonVeg, minPrice, maxPrice);
+    console.log('Menu filter:', menuWhere);
+
+    // Step 5: Build include for MenuCategory with categoryName filter
+    const menuCategoryInclude = {
+      model: MenuCategory,
+      as: 'menuCategories',
+      include: [
+        {
+          model: MenuItem,
+          as: 'menuItems',
+        },
+      ],
+      required: !!category, // Only require join if filtering by category
+      ...(category && {
+        where: { categoryName: category },
+      }),
+    };
+
+    // Step 6: Fetch menus with filters and pagination
+    const offset = (page - 1) * 10;
+    const menus = await Menu.findAndCountAll({
+      where: menuWhere,
+      limit: 10,
+      offset,
+      include: [
+        menuCategoryInclude,
+        {
+          model: Restaurant,
+          as: 'restaurant',
+          attributes: ['id', 'name'],
+        },
+      ],
+    });
+
+    console.log('Menus found:', menus.count);
+
+    // Step 7: Format menus with restaurant info
+    const menusWithRestaurant = formatMenusWithRestaurantInfo(menus, restaurantDistances);
+
+    res.status(200).json({
+      message: 'Menus fetched successfully',
+      totalMenus: menus.count,
+      totalPages: Math.ceil(menus.count / 10),
+      currentPage: parseInt(page),
+      menus: menusWithRestaurant,
+    });
+  } catch (error) {
+    console.error('Error searching menus:', error);
+    res.status(500).json({ message: 'Internal server error', error });
+  }
+};
 exports.getOrdersForConsumer = async (req, res) => {
   try {
     const userId = req.user.id;
