@@ -10,4 +10,5 @@ module.exports = {
     'Mon-Sat': [1, 2, 3, 4, 5, 6],
     'Mon-Sun': [1, 2, 3, 4, 5, 6, 7],
   },
+  distanceThreshold: 20, // Distance in kilometers for meal delivery
 };
