@@ -363,7 +363,7 @@ exports.loginRestaurant = async (req, res) => {
         return res.status(404).json({ message: 'Restaurant not found for the user' });
       }
       name = restaurant.name; // Fetch name from Restaurant table
-    } else if (userRole === 'consumer') {
+    } else if (userRole === 'customer') {
       const consumer = await Consumer.findOne({ where: { userId } });
       if (!consumer) {
         return res.status(404).json({ message: 'Consumer not found for the user' });
