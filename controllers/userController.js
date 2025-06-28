@@ -2,7 +2,7 @@
 
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-const { User, OTP, Consumer, AdminMessage } = require('../models');
+const { User, OTP, Consumer, AdminMessage, Restaurant } = require('../models');
 
 // Register Admin
 exports.registerAdmin = async (req, res) => {
