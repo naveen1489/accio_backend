@@ -331,4 +331,75 @@ router.post('/reset-password', authenticateToken, userController.resetPassword);
  *         description: Internal server error
  */
 router.post('/admin/message', authenticateToken, userController.sendMessageToAdmin);
+
+/**
+ * @swagger
+ * /admin/messages:
+ *   get:
+ *     summary: Get all messages sent to the admin
+ *     tags:
+ *       - Admin
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *         description: The page number for pagination
+ *         example: 1
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *         description: The number of messages per page
+ *         example: 10
+ *     responses:
+ *       200:
+ *         description: Messages fetched successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Messages fetched successfully
+ *                 totalMessages:
+ *                   type: integer
+ *                 totalPages:
+ *                   type: integer
+ *                 currentPage:
+ *                   type: integer
+ *                 messages:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       id:
+ *                         type: integer
+ *                       userId:
+ *                         type: string
+ *                       message:
+ *                         type: string
+ *                       emailId:
+ *                         type: string
+ *                       userRole:
+ *                         type: string
+ *                       name:
+ *                         type: string
+ *                       personalDetails:
+ *                         type: object
+ *                         properties:
+ *                           mobile:
+ *                             type: string
+ *                           email:
+ *                             type: string
+ *                           profilePic:
+ *                             type: string
+ *       500:
+ *         description: Internal server error
+ */
+router.get('/admin/messages',authenticateToken, getMessagesToAdmin);
+
 module.exports = router;
