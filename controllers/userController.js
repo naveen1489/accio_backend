@@ -415,9 +415,10 @@ exports.getMessagesToAdmin = async (req, res) => {
           userDetails = restaurant
             ? {
                 name: restaurant.name,
-                contactNumber: restaurant.contactNumber,
+                mobile: restaurant.contactNumber,
                 email: restaurant.emailId,
                 companyName: restaurant.companyName,
+                profilePic: restaurant.imageUrl,
               }
             : null;
         } else if (userRole === 'customer') {
