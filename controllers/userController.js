@@ -408,7 +408,8 @@ exports.getMessagesToAdmin = async (req, res) => {
         let userDetails = null;
 
         if (userRole === 'restaurant') {
-          const restaurant = await Restaurant.findOne(messageObj.userId, {
+             const restaurant = await Restaurant.findOne({
+            where: { userId: messageObj.userId },
             attributes: ['name', 'contactNumber', 'emailId', 'companyName'],
           });
           userDetails = restaurant
@@ -420,7 +421,8 @@ exports.getMessagesToAdmin = async (req, res) => {
               }
             : null;
         } else if (userRole === 'customer') {
-          const consumer = await Consumer.findOne(messageObj.userId, {
+       const consumer = await Consumer.findOne({
+            where: { userId: messageObj.userId },
             attributes: ['name', 'mobile', 'email', 'profilePic'],
           });
           userDetails = consumer
