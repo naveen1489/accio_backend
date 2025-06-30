@@ -388,59 +388,67 @@ exports.loginRestaurant = async (req, res) => {
     res.status(500).json({ message: 'Internal server error', error });
   }
 
-exports.sendMessageToAdmin = async (req, res) => {
+exports.getMessagesToAdmin = async (req, res) => {
   try {
-    const userId = req.user.id; // Extract userId from JWT
-    const { message, emailId } = req.body;
+    const { page = 1, limit = 10 } = req.query; // Pagination parameters
 
-    // Validate required fields
-    if (!message || !emailId) {
-      return res.status(400).json({ message: 'Message and emailId are required' });
-    }
-
-    // Determine user role and fetch details accordingly
-    const userRole = req.user.role; // Assuming role is set in JWT
-    let name, personalDetails;
-
-    if (userRole === 'restaurant') {
-      const restaurant = await Restaurant.findOne({ where: { userId } });
-      if (!restaurant) {
-        return res.status(404).json({ message: 'Restaurant not found for the user' });
-      }
-      name = restaurant.name; // Fetch name from Restaurant table
-      personalDetails = {
-        mobile: restaurant.contactNumber,
-        email: restaurant.emailId,
-        profilePic: restaurant.imageUrl,
-      restaurantName: restaurant.companyName  };
-    } else if (userRole === 'customer') {
-      const consumer = await Consumer.findOne({ where: { userId } });
-      if (!consumer) {
-        return res.status(404).json({ message: 'Consumer not found for the user' });
-      }
-      name = consumer.name; // Fetch name from Consumer table
-      personalDetails = {
-        mobile: consumer.mobile,
-        email: consumer.email,
-        profilePic: consumer.profilePic, // Assuming profilePic contains address details
-      };
-    } else {
-      return res.status(400).json({ message: 'Invalid user role' });
-    }
-
-    // Save the message to the database (assuming AdminMessage model exists)
-    const adminMessage = await AdminMessage.create({
-      userId,
-      message,
-      emailId,
-      userRole,
-      name,
-      personalDetails, // Include personal details
+    // Fetch messages with pagination
+    const offset = (page - 1) * limit;
+    const messages = await AdminMessage.findAndCountAll({
+      limit: parseInt(limit),
+      offset: parseInt(offset),
+      order: [['createdAt', 'DESC']], // Sort messages by creation date (newest first)
     });
 
-    res.status(201).json({ message: 'Message sent to admin successfully', adminMessage });
+    // Format messages with extra details based on userRole
+    const formattedMessages = await Promise.all(
+      messages.rows.map(async (message) => {
+        const messageObj = message.toJSON();
+        const userRole = messageObj.userRole;
+        let userDetails = null;
+
+        if (userRole === 'restaurant') {
+          const restaurant = await Restaurant.findByPk(messageObj.userId, {
+            attributes: ['name', 'contactNumber', 'emailId', 'companyName'],
+          });
+          userDetails = restaurant
+            ? {
+                name: restaurant.name,
+                contactNumber: restaurant.contactNumber,
+                email: restaurant.emailId,
+                companyName: restaurant.companyName,
+              }
+            : null;
+        } else if (userRole === 'customer') {
+          const consumer = await Consumer.findByPk(messageObj.userId, {
+            attributes: ['name', 'mobile', 'email', 'profilePic'],
+          });
+          userDetails = consumer
+            ? {
+                name: consumer.name,
+                mobile: consumer.mobile,
+                email: consumer.email,
+                profilePic: consumer.profilePic,
+              }
+            : null;
+        }
+
+        return {
+          ...messageObj,
+          userDetails,
+        };
+      })
+    );
+
+    res.status(200).json({
+      message: 'Messages fetched successfully',
+      totalMessages: messages.count,
+      totalPages: Math.ceil(messages.count / limit),
+      currentPage: parseInt(page),
+      messages: formattedMessages,
+    });
   } catch (error) {
-    console.error('Error sending message to admin:', error);
+    console.error('Error fetching messages to admin:', error);
     res.status(500).json({ message: 'Internal server error', error });
   }
 };

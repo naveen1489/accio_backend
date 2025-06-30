@@ -400,6 +400,6 @@ router.post('/admin/message', authenticateToken, userController.sendMessageToAdm
  *       500:
  *         description: Internal server error
  */
-router.get('/admin/messages',authenticateToken, getMessagesToAdmin);
+router.get('/admin/messages',authenticateToken, userController.getMessagesToAdmin);
 
 module.exports = router;
