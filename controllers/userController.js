@@ -410,7 +410,7 @@ exports.getMessagesToAdmin = async (req, res) => {
         if (userRole === 'restaurant') {
              const restaurant = await Restaurant.findOne({
             where: { userId: messageObj.userId },
-            attributes: ['name', 'contactNumber', 'emailId', 'companyName'],
+            attributes: ['name', 'contactNumber', 'emailId', 'companyName', 'imageUrl'],
           });
           userDetails = restaurant
             ? {
