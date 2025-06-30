@@ -387,7 +387,7 @@ exports.loginRestaurant = async (req, res) => {
     console.error('Error sending message to admin:', error);
     res.status(500).json({ message: 'Internal server error', error });
   }
-
+};
 exports.getMessagesToAdmin = async (req, res) => {
   try {
     const { page = 1, limit = 10 } = req.query; // Pagination parameters
@@ -453,4 +453,3 @@ exports.getMessagesToAdmin = async (req, res) => {
   }
 };
 
-};
