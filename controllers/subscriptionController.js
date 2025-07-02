@@ -118,16 +118,10 @@ exports.createSubscription = async (req, res) => {
       status: 'pending', // Default status
     });
 
-    // Notify the restaurant
-    const contactNumber = restaurant.contactNumber;
-    const restaurantUser = await User.findOne({
-      where: { username: contactNumber },
-      attributes: ['id'], // Only get the 'id' field
-    });
 
     if (consumer) {
       await Notification.create({
-        ReceiverId: restaurantUser.id,
+        ReceiverId: restaurant.userId,
         SenderId: consumer.userId,
         NotificationMessage: `A new subscription has been requested by "${consumer.name}" for the menu "${menu.menuName}".`,
         NotificationType: 'Subscription Request',
@@ -382,6 +376,32 @@ exports.updateSubscriptionStatus = async (req, res) => {
       // Bulk create orders
       await Order.bulkCreate(orders);
     }
+
+ // Check if the restaurant exists
+    const restaurant = await Restaurant.findByPk(subscription.restaurantId);
+    if (!restaurant) {
+      return res.status(404).json({ message: 'Restaurant not found' });
+    }
+
+      // Fetch the currentAddressId from the Consumer table
+    const consumer = await Consumer.findByPk(subscription.consumerId);
+    if (!consumer) {
+      return res.status(404).json({ message: 'Consumer not found' });
+    }
+
+     // Check if the menu exists
+    const menu = await Menu.findByPk(subscription.menuId);
+    if (!menu) {
+      return res.status(404).json({ message: 'Menu not found' });
+    }
+
+ await Notification.create({
+        ReceiverId: consumer.userId,
+        SenderId: restaurant.userId,
+        NotificationMessage: `Your subscription has been ${status} by the restaurant ${restaurant.companyName} for the menu "${menu.menuName}".`,
+        NotificationType: 'Subscription Status Update',
+        NotificationMetadata: { subscriptionId: subscription.id },
+      });
 
     res.status(200).json({ message: 'Subscription status updated successfully', subscription });
   } catch (error) {

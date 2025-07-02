@@ -2,7 +2,7 @@
 
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-const { User, OTP, Consumer, AdminMessage } = require('../models');
+const { User, OTP, Consumer, AdminMessage, Restaurant } = require('../models');
 
 // Register Admin
 exports.registerAdmin = async (req, res) => {
@@ -363,7 +363,7 @@ exports.loginRestaurant = async (req, res) => {
         return res.status(404).json({ message: 'Restaurant not found for the user' });
       }
       name = restaurant.name; // Fetch name from Restaurant table
-    } else if (userRole === 'consumer') {
+    } else if (userRole === 'customer') {
       const consumer = await Consumer.findOne({ where: { userId } });
       if (!consumer) {
         return res.status(404).json({ message: 'Consumer not found for the user' });
@@ -388,3 +388,71 @@ exports.loginRestaurant = async (req, res) => {
     res.status(500).json({ message: 'Internal server error', error });
   }
 };
+exports.getMessagesToAdmin = async (req, res) => {
+  try {
+    const { page = 1, limit = 10 } = req.query; // Pagination parameters
+
+    // Fetch messages with pagination
+    const offset = (page - 1) * limit;
+    const messages = await AdminMessage.findAndCountAll({
+      limit: parseInt(limit),
+      offset: parseInt(offset),
+      order: [['createdAt', 'DESC']], // Sort messages by creation date (newest first)
+    });
+
+    // Format messages with extra details based on userRole
+    const formattedMessages = await Promise.all(
+      messages.rows.map(async (message) => {
+        const messageObj = message.toJSON();
+        const userRole = messageObj.userRole;
+        let userDetails = null;
+
+        if (userRole === 'restaurant') {
+             const restaurant = await Restaurant.findOne({
+            where: { userId: messageObj.userId },
+            attributes: ['name', 'contactNumber', 'emailId', 'companyName', 'imageUrl'],
+          });
+          userDetails = restaurant
+            ? {
+                name: restaurant.name,
+                mobile: restaurant.contactNumber,
+                email: restaurant.emailId,
+                companyName: restaurant.companyName,
+                profilePic: restaurant.imageUrl,
+              }
+            : null;
+        } else if (userRole === 'customer') {
+       const consumer = await Consumer.findOne({
+            where: { userId: messageObj.userId },
+            attributes: ['name', 'mobile', 'email', 'profilePic'],
+          });
+          userDetails = consumer
+            ? {
+                name: consumer.name,
+                mobile: consumer.mobile,
+                email: consumer.email,
+                profilePic: consumer.profilePic,
+              }
+            : null;
+        }
+
+        return {
+          ...messageObj,
+          userDetails,
+        };
+      })
+    );
+
+    res.status(200).json({
+      message: 'Messages fetched successfully',
+      totalMessages: messages.count,
+      totalPages: Math.ceil(messages.count / limit),
+      currentPage: parseInt(page),
+      messages: formattedMessages,
+    });
+  } catch (error) {
+    console.error('Error fetching messages to admin:', error);
+    res.status(500).json({ message: 'Internal server error', error });
+  }
+};
+
