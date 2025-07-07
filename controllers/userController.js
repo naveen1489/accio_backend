@@ -2,7 +2,7 @@
 
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-const { User, OTP, Consumer, AdminMessage, Restaurant } = require('../models');
+const { User, OTP, Consumer, AdminMessage, Restaurant, DeliveryPartner } = require('../models');
 
 // Register Admin
 exports.registerAdmin = async (req, res) => {
@@ -342,6 +342,49 @@ exports.loginRestaurant = async (req, res) => {
       res.status(500).json({ message: 'Internal server error', error });
     }
   };
+
+exports.verifyOtpForDeliveryLogin = async (req, res) => {
+  try {
+    const { phone, otp } = req.body;
+
+    // Validate required fields
+    if (!phone || !otp) {
+      return res.status(400).json({ message: 'Phone and OTP are required' });
+    }
+
+    // Find the OTP record for the given phone number
+    const otpRecord = await OTP.findOne({ where: { phone, otp } });
+    if (!otpRecord) {
+      return res.status(400).json({ message: 'Invalid OTP' });
+    }
+
+    // Check if the OTP is expired
+    if (new Date() > otpRecord.expiresAt) {
+      return res.status(400).json({ message: 'OTP has expired' });
+    }
+
+    // Find the delivery partner by phone
+    const deliveryPartner = await DeliveryPartner.findOne({ where: { phone, status: 'active' } });
+    if (!deliveryPartner) {
+      return res.status(404).json({ message: 'Delivery partner not found or inactive' });
+    }
+
+    // OTP is valid, delete it from the database
+    await otpRecord.destroy();
+
+    // Generate a JWT token for the delivery partner
+    const token = jwt.sign(
+      { id: deliveryPartner.id, phone: deliveryPartner.phone, role: 'deliveryPartner' },
+      process.env.JWT_SECRET,
+      { expiresIn: '1d' } // Token expires in 1 day
+    );
+
+    res.status(200).json({ message: 'OTP verified successfully', token });
+  } catch (error) {
+    console.error('Error verifying OTP for delivery login:', error);
+    res.status(500).json({ message: 'Internal server error', error });
+  }
+};
 
   exports.sendMessageToAdmin = async (req, res) => {
   try {

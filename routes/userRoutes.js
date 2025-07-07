@@ -402,4 +402,50 @@ router.post('/admin/message', authenticateToken, userController.sendMessageToAdm
  */
 router.get('/admin/messages',authenticateToken, userController.getMessagesToAdmin);
 
+
+/**
+ * @swagger
+ * /delivery/verifyOtp:
+ *   post:
+ *     summary: Verify OTP for delivery partner login
+ *     tags:
+ *       - Delivery Partner
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               phone:
+ *                 type: string
+ *                 description: The phone number of the delivery partner
+ *                 example: "9876543210"
+ *               otp:
+ *                 type: string
+ *                 description: The OTP sent to the delivery partner
+ *                 example: "123456"
+ *     responses:
+ *       200:
+ *         description: OTP verified successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: OTP verified successfully
+ *                 token:
+ *                   type: string
+ *                   example: "JWT_TOKEN"
+ *       400:
+ *         description: Invalid or expired OTP
+ *       404:
+ *         description: Delivery partner not found or inactive
+ *       500:
+ *         description: Internal server error
+ */
+router.post('/verifyOtp',userController.verifyOtpForDeliveryLogin);
+
 module.exports = router;
