@@ -316,7 +316,7 @@ exports.loginRestaurant = async (req, res) => {
 
   exports.loginDeliveryPartner = async (req, res) => {
     try {
-      const { phone } = req.body;
+      const { username } = req.body;
   
       // Find the delivery partner by phone
       const deliveryPartner = await DeliveryPartner.findOne({ where: { phone, status: 'active' } });
@@ -331,7 +331,7 @@ exports.loginRestaurant = async (req, res) => {
       const expiresAt = new Date(Date.now() + 5 * 60 * 1000);
   
       // Save the OTP in the database (or use a separate OTP table)
-      await OTP.create({ phone, otp, expiresAt });
+      await OTP.create({ username, otp, expiresAt });
   
       // Send OTP via SMS (replace with actual SMS sending logic)
       console.log(`Sending OTP ${otp} to phone ${phone}`);
