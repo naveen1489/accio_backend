@@ -2,7 +2,7 @@
 
 const { Op } = require('sequelize');
 const models = require('../models'); 
-
+const bcrypt = require('bcryptjs');
 /**
  * Add a new Delivery Partner.
  * This endpoint is used by the restaurant partner to add delivery employees.
