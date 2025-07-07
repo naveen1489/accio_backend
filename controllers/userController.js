@@ -314,34 +314,39 @@ exports.loginRestaurant = async (req, res) => {
     }
   };
 
-  exports.loginDeliveryPartner = async (req, res) => {
-    try {
-      const { username } = req.body;
-  
-      // Find the delivery partner by phone
-      const deliveryPartner = await DeliveryPartner.findOne({ where: { phone, status: 'active' } });
-      if (!deliveryPartner) {
-        return res.status(404).json({ message: 'Delivery partner not found or inactive' });
-      }
-  
-      // Generate a 6-digit random OTP
-      const otp = Math.floor(100000 + Math.random() * 900000).toString();
-  
-      // Set OTP expiration time (e.g., 5 minutes from now)
-      const expiresAt = new Date(Date.now() + 5 * 60 * 1000);
-  
-      // Save the OTP in the database (or use a separate OTP table)
-      await OTP.create({ username, otp, expiresAt });
-  
-      // Send OTP via SMS (replace with actual SMS sending logic)
-      console.log(`Sending OTP ${otp} to phone ${phone}`);
-  
-      res.status(200).json({ message: 'OTP sent successfully' });
-    } catch (error) {
-      console.error('Error during delivery partner login:', error);
-      res.status(500).json({ message: 'Internal server error', error });
+exports.loginDeliveryPartner = async (req, res) => {
+  try {
+    const { phone } = req.body;
+
+    // Validate required fields
+    if (!phone) {
+      return res.status(400).json({ message: 'Phone is required' });
     }
-  };
+
+    // Find the delivery partner by phone
+    const deliveryPartner = await DeliveryPartner.findOne({ where: { phone, status: 'active' } });
+    if (!deliveryPartner) {
+      return res.status(404).json({ message: 'Delivery partner not found or inactive' });
+    }
+
+    // Generate a 6-digit random OTP
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+
+    // Set OTP expiration time (e.g., 5 minutes from now)
+    const expiresAt = new Date(Date.now() + 5 * 60 * 1000);
+
+    // Save the OTP in the database (use phone as username)
+    await OTP.create({ username: phone, otp, expiresAt });
+
+    // Send OTP via SMS (replace with actual SMS sending logic)
+    console.log(`Sending OTP ${otp} to phone ${phone}`);
+
+    res.status(200).json({ message: 'OTP sent successfully' });
+  } catch (error) {
+    console.error('Error during delivery partner login:', error);
+    res.status(500).json({ message: 'Internal server error', error });
+  }
+};
 
 exports.verifyOtpForDeliveryLogin = async (req, res) => {
   try {
