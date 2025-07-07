@@ -357,8 +357,8 @@ exports.verifyOtpForDeliveryLogin = async (req, res) => {
       return res.status(400).json({ message: 'Phone and OTP are required' });
     }
 
-    // Find the OTP record for the given phone number
-    const otpRecord = await OTP.findOne({ where: { phone, otp } });
+    // Find the OTP record for the given phone number (stored in the username column)
+    const otpRecord = await OTP.findOne({ where: { username: phone, otp } });
     if (!otpRecord) {
       return res.status(400).json({ message: 'Invalid OTP' });
     }
