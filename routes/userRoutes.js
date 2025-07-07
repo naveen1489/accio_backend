@@ -405,7 +405,7 @@ router.get('/admin/messages',authenticateToken, userController.getMessagesToAdmi
 
 /**
  * @swagger
- * /delivery/verifyOtp:
+ * /delivery/signin/verifyOtp:
  *   post:
  *     summary: Verify OTP for delivery partner login
  *     tags:
@@ -446,6 +446,6 @@ router.get('/admin/messages',authenticateToken, userController.getMessagesToAdmi
  *       500:
  *         description: Internal server error
  */
-router.post('/verifyOtp',userController.verifyOtpForDeliveryLogin);
+router.post('/delivery/signin/verifyOtp',userController.verifyOtpForDeliveryLogin);
 
 module.exports = router;
