@@ -179,7 +179,7 @@ router.post('/login-delivery', userController.loginDeliveryPartner);
 
 /**
  * @swagger
- * /api/users/restaurant/send-otp:
+ * /api/users/send-otp:
  *   post:
  *     summary: Send OTP to a restaurant partner
  *     tags: [Users]
@@ -200,11 +200,11 @@ router.post('/login-delivery', userController.loginDeliveryPartner);
  *       500:
  *         description: Internal server error
  */
-router.post('/restaurant/send-otp', userController.sendOtp);
+router.post('/send-otp', userController.sendOtp);
 
 /**
  * @swagger
- * /api/users/restaurant/verify-otp:
+ * /api/users/verify-otp:
  *   post:
  *     summary: Verify OTP for a restaurant partner
  *     tags: [Users]
@@ -230,11 +230,45 @@ router.post('/restaurant/send-otp', userController.sendOtp);
  *       500:
  *         description: Internal server error
  */
-router.post('/restaurant/verify-otp', userController.verifyOtp);
+router.post('/verify-otp',authenticateToken, userController.verifyOtp);
+
+
 
 /**
  * @swagger
- * /api/users/restaurant/reset-password:
+ * /api/users/consumer/signup/verify-otp:
+ *   post:
+ *     summary: Verify OTP for a restaurant partner
+ *     tags: [Users]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               phone:
+ *                 type: string
+ *               otp:
+ *                 type: string
+ *           example:
+ *             phone: "9876543210"
+ *             otp: "123456"
+ *     responses:
+ *       200:
+ *         description: OTP verified successfully
+ *       400:
+ *         description: Invalid OTP
+ *       500:
+ *         description: Internal server error
+ */
+router.post('/consumer/signup/verify-otp',authenticateToken, userController.verifyOtpForConsumerSignup);
+
+
+
+/**
+ * @swagger
+ * /api/users/reset-password:
  *   post:
  *     summary: Reset password for a restaurant partner
  *     tags: [Users]
@@ -263,6 +297,155 @@ router.post('/restaurant/verify-otp', userController.verifyOtp);
  *       500:
  *         description: Internal server error
  */
-router.post('/restaurant/reset-password', userController.resetPassword);
+router.post('/reset-password', authenticateToken, userController.resetPassword);
+
+
+/**
+ * @swagger
+ * /api/admin/message:
+ *   post:
+ *     summary: Send a message to the admin
+ *     tags: [Admin]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               message:
+ *                 type: string
+ *                 description: The message to send
+ *               emailId:
+ *                 type: string
+ *                 description: Email ID of the sender
+ *           example:
+ *             message: "I need help with my subscription."
+ *             emailId: "user@example.com"
+ *     responses:
+ *       201:
+ *         description: Message sent successfully
+ *       400:
+ *         description: Missing required fields
+ *       500:
+ *         description: Internal server error
+ */
+router.post('/admin/message', authenticateToken, userController.sendMessageToAdmin);
+
+/**
+ * @swagger
+ * /admin/messages:
+ *   get:
+ *     summary: Get all messages sent to the admin
+ *     tags:
+ *       - Admin
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *         description: The page number for pagination
+ *         example: 1
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *         description: The number of messages per page
+ *         example: 10
+ *     responses:
+ *       200:
+ *         description: Messages fetched successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Messages fetched successfully
+ *                 totalMessages:
+ *                   type: integer
+ *                 totalPages:
+ *                   type: integer
+ *                 currentPage:
+ *                   type: integer
+ *                 messages:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       id:
+ *                         type: integer
+ *                       userId:
+ *                         type: string
+ *                       message:
+ *                         type: string
+ *                       emailId:
+ *                         type: string
+ *                       userRole:
+ *                         type: string
+ *                       name:
+ *                         type: string
+ *                       personalDetails:
+ *                         type: object
+ *                         properties:
+ *                           mobile:
+ *                             type: string
+ *                           email:
+ *                             type: string
+ *                           profilePic:
+ *                             type: string
+ *       500:
+ *         description: Internal server error
+ */
+router.get('/admin/messages',authenticateToken, userController.getMessagesToAdmin);
+
+
+/**
+ * @swagger
+ * /delivery/signin/verifyOtp:
+ *   post:
+ *     summary: Verify OTP for delivery partner login
+ *     tags:
+ *       - Delivery Partner
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               phone:
+ *                 type: string
+ *                 description: The phone number of the delivery partner
+ *                 example: "9876543210"
+ *               otp:
+ *                 type: string
+ *                 description: The OTP sent to the delivery partner
+ *                 example: "123456"
+ *     responses:
+ *       200:
+ *         description: OTP verified successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: OTP verified successfully
+ *                 token:
+ *                   type: string
+ *                   example: "JWT_TOKEN"
+ *       400:
+ *         description: Invalid or expired OTP
+ *       404:
+ *         description: Delivery partner not found or inactive
+ *       500:
+ *         description: Internal server error
+ */
+router.post('/delivery/signin/verifyOtp',userController.verifyOtpForDeliveryLogin);
 
 module.exports = router;

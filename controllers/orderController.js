@@ -1,5 +1,5 @@
 const { Op } = require('sequelize');
-const { Order, Menu, Subscription, DeliveryPartner, Restaurant, Consumer, Address } = require('../models');
+const { Order, Menu, Subscription, DeliveryPartner, Restaurant, Consumer, Address, Complaint, MenuItem, MenuCategory } = require('../models');
 
 
 // Get orders with filters
@@ -124,6 +124,7 @@ exports.assignOrderToDeliveryPartner = async (req, res) => {
 exports.getOrdersForDeliveryPartner = async (req, res) => {
     try {
       const { deliveryPartnerId } = req.params;
+       const userId = req.user.id;
   
       // Find all orders assigned to the delivery partner
       const orders = await Order.findAll({
@@ -267,3 +268,207 @@ exports.getOrdersForDeliveryPartner = async (req, res) => {
       res.status(500).json({ message: 'Internal server error', error });
     }
   };
+
+ exports.createComplaint = async (req, res) => {
+  try {
+    const userId = req.user.id; // Extract userId from JWT
+    const { orderId, subscriptionId, menuId, restaurantId, complaintMessage, imageUrls } = req.body;
+
+    // Validate required fields
+    if (!orderId || !subscriptionId || !menuId || !restaurantId || !complaintMessage) {
+      return res.status(400).json({ message: 'All fields are required' });
+    }
+
+    // Fetch consumerId using userId
+    const consumer = await Consumer.findOne({ where: { userId } });
+    if (!consumer) {
+      return res.status(404).json({ message: 'Consumer not found for the given user' });
+    }
+    const consumerId = consumer.id;
+
+    // Create the complaint
+    const complaint = await Complaint.create({
+      orderId,
+      subscriptionId,
+      menuId,
+      restaurantId,
+      consumerId,
+      complaintMessage,
+      imageUrls, // Add image URLs
+      status: 'pending', // Default status
+    });
+
+    res.status(201).json({ message: 'Complaint created successfully', complaint });
+  } catch (error) {
+    console.error('Error creating complaint:', error);
+    res.status(500).json({ message: 'Internal server error', error });
+  }
+};
+
+exports.updateComplaintStatus = async (req, res) => {
+  try {
+    const userId = req.user.id; // Extract userId from JWT
+    const { complaintId } = req.params; // Complaint ID from URL
+    const { comment } = req.body; // Comment from request body
+
+    // Validate required fields
+    if (!comment) {
+      return res.status(400).json({ message: 'Comment is required' });
+    }
+
+    // Fetch the restaurant associated with the userId
+    const restaurant = await Restaurant.findOne({ where: { userId } });
+    if (!restaurant) {
+      return res.status(404).json({ message: 'Restaurant not found for the user' });
+    }
+
+    const restaurantId = restaurant.id;
+
+    // Find the complaint by ID and ensure it belongs to the restaurant
+    const complaint = await Complaint.findOne({ where: { id: complaintId, restaurantId } });
+    if (!complaint) {
+      return res.status(404).json({ message: 'Complaint not found or does not belong to the restaurant' });
+    }
+
+    // Update the complaint status and add the comment
+    complaint.status = 'resolved';
+    complaint.comment = comment;
+    await complaint.save();
+
+    res.status(200).json({ message: 'Complaint status updated successfully', complaint });
+  } catch (error) {
+    console.error('Error updating complaint status:', error);
+    res.status(500).json({ message: 'Internal server error', error });
+  }
+};
+
+exports.getComplaintsByRestaurant = async (req, res) => {
+  try {
+    const userId = req.user.id; // Extract userId from JWT
+
+    // Fetch the restaurant associated with the userId
+    const restaurant = await Restaurant.findOne({ where: { userId } });
+    if (!restaurant) {
+      return res.status(404).json({ message: 'Restaurant not found for the user' });
+    }
+
+    const restaurantId = restaurant.id;
+
+    // Extract pagination parameters
+    const { page = 1, limit = 10 } = req.query;
+    const offset = (page - 1) * limit;
+
+    // Fetch complaints for the restaurant
+    const complaints = await Complaint.findAndCountAll({
+      where: { restaurantId },
+      limit: parseInt(limit),
+      offset: parseInt(offset),
+      order: [['createdAt', 'DESC']],
+      include: [
+        {
+          model: Consumer,
+          as: 'consumer',
+          attributes: ['id', 'name', 'mobile'], // Include consumer name
+        },
+        {
+          model: Menu,
+          as: 'menu',
+          attributes: ['id', 'menuName'], // Include menu name
+          include: [
+            {
+              model: MenuCategory,
+              as: 'menuCategories',
+              attributes: ['id', 'categoryName'], // Include menu category
+              include: [
+                {
+                  model: MenuItem,
+                  as: 'menuItems',
+                  attributes: ['id', 'itemName', 'itemCategory'], // Include menu items
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    });
+
+    res.status(200).json({
+      message: 'Complaints fetched successfully',
+      totalComplaints: complaints.count,
+      totalPages: Math.ceil(complaints.count / limit),
+      currentPage: parseInt(page),
+      complaints: complaints.rows,
+    });
+  } catch (error) {
+    console.error('Error fetching complaints by restaurant:', error);
+    res.status(500).json({ message: 'Internal server error', error });
+  }
+};
+
+exports.getComplaintsByConsumer = async (req, res) => {
+  try {
+    const userId = req.user.id; // Extract userId from JWT
+
+    // Fetch the consumer associated with the userId
+    const consumer = await Consumer.findOne({ where: { userId } });
+    if (!consumer) {
+      return res.status(404).json({ message: 'Consumer not found for the user' });
+    }
+
+    const consumerId = consumer.id;
+
+    // Extract pagination parameters
+    const { page = 1, limit = 10 } = req.query;
+    const offset = (page - 1) * limit;
+
+    // Fetch complaints for the consumer
+    const complaints = await Complaint.findAndCountAll({
+      where: { consumerId },
+      limit: parseInt(limit),
+      offset: parseInt(offset),
+      order: [['createdAt', 'DESC']],
+      include: [
+        {
+          model: Consumer,
+          as: 'consumer',
+          attributes: ['id', 'name'], // Include consumer name
+        },
+        {
+          model: Menu,
+          as: 'menu',
+          attributes: ['id', 'menuName'], // Include menu name
+          include: [
+             {
+              model: MenuCategory,
+              as: 'menuCategories',
+              attributes: ['id', 'categoryName'], // Include menu category
+              include: [
+                {
+                  model: MenuItem,
+                  as: 'menuItems',
+                  attributes: ['id', 'itemName', 'itemCategory'], // Include menu items
+                },
+              ],
+            },
+          ],
+        },
+        {
+          model: Restaurant,
+          as: 'restaurant',
+          attributes: ['id', 'name'], // Include restaurant name
+        },
+      ],
+    });
+
+    res.status(200).json({
+      message: 'Complaints fetched successfully',
+      totalComplaints: complaints.count,
+      totalPages: Math.ceil(complaints.count / limit),
+      currentPage: parseInt(page),
+      complaints: complaints.rows,
+    });
+  } catch (error) {
+    console.error('Error fetching complaints by consumer:', error);
+    res.status(500).json({ message: 'Internal server error', error });
+  }
+};

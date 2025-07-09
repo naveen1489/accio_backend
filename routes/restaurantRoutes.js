@@ -336,6 +336,74 @@ router.delete('/delivery/:id', restaurantController.deleteDeliveryPartner);
  */
 router.get('/delivery/restaurant/:restaurantId', restaurantController.getDeliveryPartnersByRestaurantId);
 
+/**
+ * @swagger
+ * /api/restaurants/stop-subscription:
+ *   patch:
+ *     summary: Stop restaurant subscription (set status to Inactive)
+ *     tags: [Restaurants]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Restaurant subscription stopped
+ *       404:
+ *         description: Restaurant not found for this user
+ *       500:
+ *         description: Internal server error
+ */
+router.patch('/stop-subscription', authenticateToken, restaurantController.stopSubscription);
 
+/**
+ * @swagger
+ * /api/restaurants/start-subscription:
+ *   patch:
+ *     summary: Start restaurant subscription (set status to Active)
+ *     tags: [Restaurants]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Restaurant subscription started
+ *       404:
+ *         description: Restaurant not found for this user
+ *       500:
+ *         description: Internal server error
+ */
+router.patch('/start-subscription', authenticateToken, restaurantController.startSubscription);
 
+/**
+ * @swagger
+ * /api/restaurants/close-dates:
+ *   patch:
+ *     summary: Update restaurant close dates
+ *     tags: [Restaurants]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               closeStartDate:
+ *                 type: string
+ *                 format: date
+ *                 example: "2025-06-01"
+ *               closeEndDate:
+ *                 type: string
+ *                 format: date
+ *                 example: "2025-06-10"
+ *     responses:
+ *       200:
+ *         description: Close dates updated successfully
+ *       400:
+ *         description: Missing required fields
+ *       404:
+ *         description: Restaurant not found
+ *       500:
+ *         description: Internal server error
+ */
+router.patch('/close-dates', authenticateToken, restaurantController.updateCloseDates);
 module.exports = router;

@@ -147,4 +147,154 @@ router.patch('/:orderId/status', orderController.updateOrderStatusByDeliveryPart
 
 
 router.get('/stats', authMiddleware, orderController.getOrderAndRevenueStats);
+
+
+/**
+ * @swagger
+ * /api/orders/complaint:
+ *   post:
+ *     summary: Create a complaint for an order
+ *     tags: [Orders]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               orderId:
+ *                 type: integer
+ *                 description: ID of the order
+ *               subscriptionId:
+ *                 type: integer
+ *                 description: ID of the subscription
+ *               menuId:
+ *                 type: integer
+ *                 description: ID of the menu
+ *               restaurantId:
+ *                 type: integer
+ *                 description: ID of the restaurant
+ *               complaintMessage:
+ *                 type: string
+ *                 description: Complaint message
+ *               imageUrls:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *                 description: Array of image URLs related to the complaint
+ *           example:
+ *             orderId: 1
+ *             subscriptionId: 2
+ *             menuId: 3
+ *             restaurantId: 4
+ *             complaintMessage: "The food was cold and late."
+ *             imageUrls: ["https://example.com/image1.jpg", "https://example.com/image2.jpg"]
+ *     responses:
+ *       201:
+ *         description: Complaint created successfully
+ *       400:
+ *         description: Missing required fields
+ *       500:
+ *         description: Internal server error
+ */
+router.post('/complaint', authMiddleware, orderController.createComplaint);
+
+/**
+ * @swagger
+ * /api/orders/complaint/{complaintId}/resolve:
+ *   patch:
+ *     summary: Update complaint status to resolved and add a comment for the consumer
+ *     tags: [Orders]
+ *     parameters:
+ *       - in: path
+ *         name: complaintId
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: ID of the complaint to update
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               comment:
+ *                 type: string
+ *                 description: Comment for the consumer
+ *           example:
+ *             comment: "We apologize for the inconvenience. The issue has been resolved."
+ *     responses:
+ *       200:
+ *         description: Complaint status updated successfully
+ *       400:
+ *         description: Missing required fields
+ *       404:
+ *         description: Complaint not found
+ *       500:
+ *         description: Internal server error
+ */
+router.patch('/complaint/:complaintId/resolve', authMiddleware, orderController.updateComplaintStatus);
+
+/**
+ * @swagger
+ * /api/orders/complaints/restaurant:
+ *   get:
+ *     summary: Get complaints for the restaurant
+ *     tags: [Orders]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           default: 1
+ *         description: Page number for pagination
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 10
+ *         description: Number of complaints per page
+ *     responses:
+ *       200:
+ *         description: Complaints fetched successfully
+ *       404:
+ *         description: Restaurant not found
+ *       500:
+ *         description: Internal server error
+ */
+router.get('/complaints/restaurant', authMiddleware, orderController.getComplaintsByRestaurant);
+
+/**
+ * @swagger
+ * /api/orders/complaints/consumer:
+ *   get:
+ *     summary: Get complaints for the consumer
+ *     tags: [Orders]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           default: 1
+ *         description: Page number for pagination
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 10
+ *         description: Number of complaints per page
+ *     responses:
+ *       200:
+ *         description: Complaints fetched successfully
+ *       404:
+ *         description: Consumer not found
+ *       500:
+ *         description: Internal server error
+ */
+router.get('/complaints/consumer', authMiddleware, orderController.getComplaintsByConsumer);
 module.exports = router;

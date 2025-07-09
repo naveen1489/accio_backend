@@ -1,20 +1,9 @@
 'use strict';
 
 const { Subscription, Order, Restaurant, Menu, User , Consumer, Address, Notification,  Discount} = require('../models');
+const { Op } = require('sequelize');
+const { mealPlanConfig, mealFrequencyConfig } = require('../config/applicationConfig');
 
-
-const mealPlanConfig = {
-  '1 Week': 7,
-  '2 Week': 14,
-  '3 Week': 21,
-  '4 Week': 28,
-};
-
-const mealFrequencyConfig = {
-  'Mon-Fri': [1, 2, 3, 4, 5], // Monday to Friday
-  'Mon-Sat': [1, 2, 3, 4, 5, 6], // Monday to Saturday
-  'Mon-Sun': [0, 1, 2, 3, 4, 5, 6], // All days of the week
-};
 
 const calculateNumberOfOrders = (mealPlan, mealFrequency) => {
   // Get the total number of days from the meal plan
@@ -111,6 +100,8 @@ exports.createSubscription = async (req, res) => {
 
     // Calculate the payment amount
     const paymentAmount = calculatePaymentAmount(numberOfOrders, adjustedMenuPrice);
+    
+    const adjustedEndDate = adjustSubscriptionEndDate(startDate, endDate, restaurant.closeStartDate, restaurant.closeEndDate);
 
     // Create the subscription
     const subscription = await Subscription.create({
@@ -121,22 +112,16 @@ exports.createSubscription = async (req, res) => {
       mealPlan,
       mealFrequency,
       startDate,
-      endDate,
+      endDate : adjustedEndDate,
       addressId,
       paymentAmount, // Set the calculated payment amount
       status: 'pending', // Default status
     });
 
-    // Notify the restaurant
-    const contactNumber = restaurant.contactNumber;
-    const restaurantUser = await User.findOne({
-      where: { username: contactNumber },
-      attributes: ['id'], // Only get the 'id' field
-    });
 
     if (consumer) {
       await Notification.create({
-        ReceiverId: restaurantUser.id,
+        ReceiverId: restaurant.userId,
         SenderId: consumer.userId,
         NotificationMessage: `A new subscription has been requested by "${consumer.name}" for the menu "${menu.menuName}".`,
         NotificationType: 'Subscription Request',
@@ -149,6 +134,31 @@ exports.createSubscription = async (req, res) => {
     console.error('Error creating subscription:', error);
     res.status(500).json({ message: 'Internal server error', error });
   }
+};
+const adjustSubscriptionEndDate = (startDate, endDate, closeStartDate, closeEndDate) => {
+  // Convert dates to Date objects
+  const subscriptionStart = new Date(startDate);
+  const subscriptionEnd = new Date(endDate);
+  const closeStart = new Date(closeStartDate);
+  const closeEnd = new Date(closeEndDate);
+
+  // Check if the restaurant's close days overlap with the subscription period
+  if (
+    (closeStart >= subscriptionStart && closeStart <= subscriptionEnd) ||
+    (closeEnd >= subscriptionStart && closeEnd <= subscriptionEnd)
+  ) {
+    const overlapStart = Math.max(closeStart.getTime(), subscriptionStart.getTime());
+    const overlapEnd = Math.min(closeEnd.getTime(), subscriptionEnd.getTime());
+
+    // Calculate the number of overlapping close days
+    const closeDaysCount = Math.ceil((overlapEnd - overlapStart) / (1000 * 60 * 60 * 24)) + 1;
+
+    // Extend the subscription end date by the number of close days
+    return new Date(subscriptionEnd.getTime() + closeDaysCount * 24 * 60 * 60 * 1000);
+  }
+
+  // Return the original end date if no overlap
+  return subscriptionEnd;
 };
 
 exports.updateSubscription = async (req, res) => {
@@ -231,26 +241,47 @@ exports.getSubscriptionsByRestaurantId = async (req, res) => {
     res.status(500).json({ message: 'Internal server error', error });
   }
 };
+
 exports.getSubscriptionsByUserId = async (req, res) => {
   try {
-    const { userId } = req.params;
+    const userId = req.user.id;
 
-    // Find subscriptions by userId
+    // Find the consumer by userId
+    const consumer = await Consumer.findOne({ where: { userId } });
+    if (!consumer) {
+      return res.status(404).json({ message: 'Consumer not found for this user' });
+    }
+
+    // Find subscriptions by consumerId
     const subscriptions = await Subscription.findAll({
-      where: { userId },
+      where: { consumerId: consumer.id },
       include: [
-        { model: User, as: 'customer' },
+        { model: Consumer, as: 'customer' },
         { model: Restaurant, as: 'restaurant' },
         { model: Menu, as: 'menu' },
       ],
     });
 
-    res.status(200).json({ subscriptions });
+       // Fetch and attach address for each subscription
+    const subscriptionsWithAddress = await Promise.all(
+      subscriptions.map(async (sub) => {
+        const address = sub.addressId ? await Address.findByPk(sub.addressId) : null;
+        return {
+          ...sub.toJSON(),
+          address,
+        };
+      })
+    );
+
+
+    res.status(200).json({ subscriptions: subscriptionsWithAddress });
   } catch (error) {
     console.error('Error fetching subscriptions by userId:', error);
     res.status(500).json({ message: 'Internal server error', error });
   }
 };
+
+
 exports.getSubscriptionById = async (req, res) => {
   try {
     const { id } = req.params;
@@ -261,6 +292,9 @@ exports.getSubscriptionById = async (req, res) => {
         { model: Consumer, as: 'customer' },
         { model: Restaurant, as: 'restaurant' },
         { model: Menu, as: 'menu' },
+         {
+          model: Address,
+          as: 'address'     },
       ],
     });
 
@@ -304,25 +338,36 @@ exports.updateSubscriptionStatus = async (req, res) => {
     if (status === 'approved') {
       const { startDate, endDate, mealFrequency, restaurantId, menuId, addressId } = subscription;
       const userId = subscription.consumerId; // Retrieve userId from the associated Consumer
-     console.log('User ID:', userId); // Debugging
+
       const orders = [];
       const currentDate = new Date(startDate);
 
+      // Determine allowed days based on mealFrequency
+      const allowedDays = mealFrequencyConfig[mealFrequency];
+      if (!allowedDays) {
+        return res.status(400).json({ message: `Invalid meal frequency: ${mealFrequency}` });
+      }
+
       while (currentDate <= new Date(endDate)) {
-        // Add orders based on meal frequency
-       // if (mealFrequency === 'daily' || (mealFrequency === 'alternate' && currentDate.getDate() % 2 === 0)) {
+        const dayOfWeek = currentDate.getDay(); // Get the day of the week (0 = Sunday, 1 = Monday, ..., 6 = Saturday)
+
+        // Create orders only for allowed days
+        if (allowedDays.includes(dayOfWeek)) {
           const orderNumber = Math.floor(1000000000000000 + Math.random() * 9000000000000000).toString(); // Generate random 16-digit number
+          // Normalize the date to only include the date component
+      const normalizedDate = new Date(currentDate);
+      normalizedDate.setHours(0, 0, 0, 0); // Set time to 00:00:00
           orders.push({
             subscriptionId: subscription.id,
             userId, // Set the userId correctly
             restaurantId,
             menuId,
-            addressId, 
-            orderDate: new Date(),
+            addressId,
+            orderDate: normalizedDate, // Use the current date in the iteration
             status: 'pending', // Default order status
             orderNumber, // Add the generated order number
           });
-      //  }
+        }
 
         // Increment the date by 1 day
         currentDate.setDate(currentDate.getDate() + 1);
@@ -331,6 +376,32 @@ exports.updateSubscriptionStatus = async (req, res) => {
       // Bulk create orders
       await Order.bulkCreate(orders);
     }
+
+ // Check if the restaurant exists
+    const restaurant = await Restaurant.findByPk(subscription.restaurantId);
+    if (!restaurant) {
+      return res.status(404).json({ message: 'Restaurant not found' });
+    }
+
+      // Fetch the currentAddressId from the Consumer table
+    const consumer = await Consumer.findByPk(subscription.consumerId);
+    if (!consumer) {
+      return res.status(404).json({ message: 'Consumer not found' });
+    }
+
+     // Check if the menu exists
+    const menu = await Menu.findByPk(subscription.menuId);
+    if (!menu) {
+      return res.status(404).json({ message: 'Menu not found' });
+    }
+
+ await Notification.create({
+        ReceiverId: consumer.userId,
+        SenderId: restaurant.userId,
+        NotificationMessage: `Your subscription has been ${status} by the restaurant ${restaurant.companyName} for the menu "${menu.menuName}".`,
+        NotificationType: 'Subscription Status Update',
+        NotificationMetadata: { subscriptionId: subscription.id },
+      });
 
     res.status(200).json({ message: 'Subscription status updated successfully', subscription });
   } catch (error) {
@@ -342,18 +413,17 @@ exports.updateSubscriptionStatus = async (req, res) => {
 exports.pauseSubscription = async (req, res) => {
   try {
     const { id } = req.params; // Subscription ID
-    const { pauseStartDate, pauseEndDate } = req.body; // Pause start and end dates
+    const { pausedDates } = req.body; // Array of dates to be paused
 
-    // Validate the pause dates
-    if (!pauseStartDate || !pauseEndDate) {
-      return res.status(400).json({ message: 'Pause start and end dates are required' });
+    // Validate the pausedDates array
+    if (!pausedDates || !Array.isArray(pausedDates) || pausedDates.length === 0) {
+      return res.status(400).json({ message: 'An array of paused dates is required' });
     }
 
-    const startDate = new Date(pauseStartDate);
-    const endDate = new Date(pauseEndDate);
-
-    if (startDate >= endDate) {
-      return res.status(400).json({ message: 'Pause end date must be after the start date' });
+    // Convert pausedDates to Date objects and validate each date
+    const validDates = pausedDates.map(date => new Date(date)).filter(date => !isNaN(date));
+    if (validDates.length !== pausedDates.length) {
+      return res.status(400).json({ message: 'Invalid dates provided in the array' });
     }
 
     // Find the subscription by ID
@@ -362,30 +432,111 @@ exports.pauseSubscription = async (req, res) => {
       return res.status(404).json({ message: 'Subscription not found' });
     }
 
-    // Check if the subscription is already paused or cancelled
-    if (subscription.status === 'paused') {
-      return res.status(400).json({ message: 'Subscription is already paused' });
-    }
-    if (subscription.status === 'cancelled') {
-      return res.status(400).json({ message: 'Cannot pause a cancelled subscription' });
+    const { mealFrequency, endDate } = subscription;
+
+    // Determine allowed days based on mealFrequency
+    const allowedDays = mealFrequencyConfig[mealFrequency];
+    if (!allowedDays) {
+      return res.status(400).json({ message: `Invalid meal frequency: ${mealFrequency}` });
     }
 
-    // Calculate the number of paused days
-    const pausedDays = Math.ceil((endDate - startDate) / (1000 * 60 * 60 * 24)); // Difference in days
+    // Filter pausedDates to include only valid delivery days
+    const pausedDeliveryDays = validDates.filter(date => allowedDays.includes(date.getDay()));
 
-    // Update the subscription status to paused and adjust the end date
-    subscription.status = 'paused';
-    subscription.endDate = new Date(new Date(subscription.endDate).getTime() + pausedDays * 24 * 60 * 60 * 1000); // Extend endDate
-    subscription.pausedAt = startDate; // Save the pause start date
-    subscription.pauseEndDate = endDate; // Save the pause end date
+// Mark orders for paused days as canceled
+    await markOrdersAsCanceled(subscription.id, pausedDeliveryDays);
+
+
+    // Calculate the number of paused delivery days
+    const pausedDaysCount = pausedDeliveryDays.length;
+
+    // Update the subscription end date based on paused delivery days
+    subscription.endDate = new Date(new Date(endDate).getTime() + pausedDaysCount * 24 * 60 * 60 * 1000); // Extend endDate
+    subscription.pausedDates = pausedDeliveryDays; // Save the array of paused delivery days
     await subscription.save();
+// Create new orders for the extended days
+    await createOrdersForExtendedDays(subscription, pausedDaysCount);
 
-    res.status(200).json({ message: 'Subscription paused successfully', subscription });
+    res.status(200).json({
+      message: 'Subscription end date updated successfully based on paused dates',
+      subscription,
+    });
   } catch (error) {
-    console.error('Error pausing subscription:', error);
+    console.error('Error updating subscription end date:', error);
     res.status(500).json({ message: 'Internal server error', error });
   }
 };
+
+
+const markOrdersAsCanceled = async (subscriptionId, pausedDeliveryDays) => {
+  try {
+     // Normalize pausedDeliveryDays to match the database format
+    const normalizedPausedDays = pausedDeliveryDays.map(date => {
+      const normalizedDate = new Date(date);
+      normalizedDate.setHours(0, 0, 0, 0); // Set time to 00:00:00
+      return normalizedDate;
+    });
+    await Order.update(
+      { status: 'cancelled' },
+      {
+        where: {
+          subscriptionId,
+          orderDate: {
+            [Op.in]: normalizedPausedDays,
+          },
+        },
+      }
+    );
+
+    console.log(`Orders for subscription ${subscriptionId} on paused days marked as canceled.`);
+  } catch (error) {
+    console.error('Error marking orders as canceled:', error);
+    throw error;
+  }
+};
+
+const createOrdersForExtendedDays = async (subscription, pausedDaysCount) => {
+  try {
+    const { mealFrequency, endDate, restaurantId, menuId, addressId, consumerId } = subscription;
+
+    // Determine allowed days based on meal frequency
+    const allowedDays = mealFrequencyConfig[mealFrequency];
+    if (!allowedDays) {
+      throw new Error(`Invalid meal frequency: ${mealFrequency}`);
+    }
+
+    // Create new orders for the extended days
+    const currentDate = new Date(endDate);
+    const newEndDate = new Date(new Date(endDate).getTime() + pausedDaysCount * 24 * 60 * 60 * 1000);
+    const newOrders = [];
+
+    while (currentDate <= newEndDate) {
+      const dayOfWeek = currentDate.getDay();
+      if (allowedDays.includes(dayOfWeek)) {
+        const orderNumber = Math.floor(1000000000000000 + Math.random() * 9000000000000000).toString(); // Generate random 16-digit order number
+
+        newOrders.push({
+          subscriptionId: subscription.id,
+          userId: consumerId,
+          restaurantId,
+          menuId,
+          addressId,
+          orderDate: new Date(currentDate),
+          status: 'pending',
+          orderNumber,
+        });
+      }
+      currentDate.setDate(currentDate.getDate() + 1);
+    }
+
+    await Order.bulkCreate(newOrders);
+    console.log(`Created ${newOrders.length} new orders for subscription ${subscription.id}.`);
+  } catch (error) {
+    console.error('Error creating orders for extended days:', error);
+    throw error;
+  }
+};
+
 
 exports.resumeSubscription = async (req, res) => {
   try {
@@ -438,6 +589,20 @@ exports.updatePaymentStatus = async (req, res) => {
     res.status(200).json({ message: 'Payment status updated successfully', subscription });
   } catch (error) {
     console.error('Error updating payment status:', error);
+    res.status(500).json({ message: 'Internal server error', error });
+  }
+};
+
+exports.getSubscriptionConfig = (req, res) => {
+  try {
+    const subscriptionConfig = {
+      mealPlanConfig,
+      mealFrequencyConfig,
+    };
+
+    res.status(200).json(subscriptionConfig);
+  } catch (error) {
+    console.error('Error fetching subscription config:', error);
     res.status(500).json({ message: 'Internal server error', error });
   }
 };

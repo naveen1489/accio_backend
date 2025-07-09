@@ -1,10 +1,24 @@
 'use strict';
 
-const { Restaurant, sequelize } = require('../models');
+const { Restaurant, sequelize ,Subscription, Order} = require('../models');
 const transporter = require('../services/emailService');
 const { User } = require('../models'); // Import the User model
 const crypto = require('crypto'); // For generating random password
 const bcrypt = require('bcryptjs'); // Import bcrypt for password hashing
+const { Op } = require('sequelize');
+
+const mealPlanConfig = {
+  '1 Week': 7,
+  '2 Week': 14,
+  '3 Week': 21,
+  '4 Week': 28,
+};
+
+const mealFrequencyConfig = {
+  'Mon-Fri': [1, 2, 3, 4, 5], // Monday to Friday
+  'Mon-Sat': [1, 2, 3, 4, 5, 6], // Monday to Saturday
+  'Mon-Sun': [1, 2, 3, 4, 5, 6, 7], // All days of the week
+};
 
 exports.addRestaurantPartner = async (req, res) => {
     const transaction = await sequelize.transaction(); // Start a transaction
@@ -403,5 +417,183 @@ exports.getDeliveryPartnerById = async (req, res) => {
   } catch (error) {
     console.error('Error fetching delivery partner:', error);
     res.status(500).json({ message: 'Internal server error', error });
+  }
+};
+
+exports.stopSubscription = async (req, res) => {
+  try {
+    const userId = req.user.id; // Get userId from JWT
+    const restaurant = await Restaurant.findOne({ where: { userId: userId } }); // Assuming ownerId links the restaurant to the user
+    if (!restaurant) {
+      return res.status(404).json({ message: 'Restaurant not found for this user' });
+    }
+    restaurant.status = 'Inactive';
+    await restaurant.save();
+    res.status(200).json({ message: 'Restaurant subscription stopped (set to Inactive)', restaurant });
+  } catch (error) {
+    console.error('Error stopping subscription:', error);
+    res.status(500).json({ message: 'Internal server error', error });
+  }
+};
+
+exports.startSubscription = async (req, res) => {
+  try {
+    const userId = req.user.id; // Get userId from JWT
+    const restaurant = await Restaurant.findOne({ where: { userId: userId } }); // Assuming ownerId links the restaurant to the user
+    if (!restaurant) {
+      return res.status(404).json({ message: 'Restaurant not found for this user' });
+    }
+    restaurant.status = 'Active';
+    await restaurant.save();
+    res.status(200).json({ message: 'Restaurant subscription started (set to Active)', restaurant });
+  } catch (error) {
+    console.error('Error starting subscription:', error);
+    res.status(500).json({ message: 'Internal server error', error });
+  }
+};
+
+exports.updateCloseDates = async (req, res) => {
+  try {
+    const userId = req.user.id; // Get userId from JWT
+    const { closeStartDate, closeEndDate } = req.body;
+
+    // Validate input
+    if (!closeStartDate || !closeEndDate) {
+      return res.status(400).json({ message: 'Both closeStartDate and closeEndDate are required' });
+    }
+
+    const restaurant = await Restaurant.findOne({ where: { userId: userId } });
+    if (!restaurant) {
+      return res.status(404).json({ message: 'Restaurant not found for this user' });
+    }
+
+ const restaurantId = restaurant.id;
+
+    // Mark orders as canceled for the close dates
+    await markOrdersAsCanceled(restaurantId, closeStartDate, closeEndDate);
+
+    // Update subscriptions' end dates
+    await updateSubscriptionsEndDate(restaurantId, closeStartDate, closeEndDate);
+
+    // Create new orders for extended days
+    await createOrdersForExtendedDays(restaurantId, closeStartDate, closeEndDate);
+   
+    // Update close dates
+    restaurant.closeStartDate = new Date(closeStartDate);
+    restaurant.closeEndDate = new Date(closeEndDate);
+    await restaurant.save();
+
+    res.status(200).json({ message: 'Close dates updated successfully', restaurant });
+  } catch (error) {
+    console.error('Error updating close dates:', error);
+    res.status(500).json({ message: 'Internal server error', error });
+  }
+};
+
+const markOrdersAsCanceled = async (restaurantId, closeStartDate, closeEndDate) => {
+  try {
+    // Convert closeStartDate and closeEndDate to the database timezone
+    const startDate = new Date(closeStartDate);
+    startDate.setHours(0, 0, 0, 0); // Normalize time to 00:00:00
+
+    const endDate = new Date(closeEndDate);
+    endDate.setHours(23, 59, 59, 999); // Normalize time to 23:59:59
+
+    console.log(`Marking orders as canceled for restaurantId: ${restaurantId}, startDate: ${startDate}, endDate: ${endDate}`);
+
+    // Find and update orders within the close date range
+    const result = await Order.update(
+      { status: 'cancelled' },
+      {
+        where: {
+          restaurantId: restaurantId,
+          orderDate: {
+            [Op.between]: [startDate, endDate],
+          },
+        },
+      }
+    );
+
+    console.log(`Number of orders updated: ${result}`);
+  } catch (error) {
+    console.error('Error marking orders as canceled:', error);
+    throw error;
+  }
+};
+
+const updateSubscriptionsEndDate = async (restaurantId, closeStartDate, closeEndDate) => {
+  try {
+    const subscriptions = await Subscription.findAll({ where: { restaurantId } });
+    const startDate = new Date(closeStartDate);
+    const endDate = new Date(closeEndDate);
+    const canceledDaysCount = Math.ceil((endDate - startDate) / (1000 * 60 * 60 * 24)) + 1;
+
+    for (const subscription of subscriptions) {
+      const { endDate } = subscription;
+
+      // Calculate new end date
+      const newEndDate = new Date(new Date(endDate).getTime() + canceledDaysCount * 24 * 60 * 60 * 1000);
+      subscription.endDate = newEndDate;
+      await subscription.save();
+
+      console.log(`Updated end date for subscription ${subscription.id} to ${newEndDate}.`);
+    }
+  } catch (error) {
+    console.error('Error updating subscriptions end dates:', error);
+    throw error;
+  }
+};
+
+const createOrdersForExtendedDays = async (restaurantId, closeStartDate, closeEndDate) => {
+  try {
+    const subscriptions = await Subscription.findAll({ where: { restaurantId } });
+    const startDate = new Date(closeStartDate);
+    const endDate = new Date(closeEndDate);
+    const canceledDaysCount = Math.ceil((endDate - startDate) / (1000 * 60 * 60 * 24)) + 1;
+
+    for (const subscription of subscriptions) {
+      const { mealFrequency, endDate, menuId, addressId, consumerId } = subscription;
+
+      // Determine allowed days based on meal frequency
+      const allowedDays = mealFrequencyConfig[mealFrequency];
+      if (!allowedDays) {
+        console.warn(`Invalid meal frequency for subscription ${subscription.id}: ${mealFrequency}`);
+        continue;
+      }
+
+      // Create new orders for the extended days
+      const currentDate = new Date(endDate); // Start from the subscription's original end date
+      currentDate.setHours(0, 0, 0, 0); // Normalize time to 00:00:00
+
+      const newEndDate = new Date(endDate.getTime() + canceledDaysCount * 24 * 60 * 60 * 1000);
+      newEndDate.setHours(0, 0, 0, 0); // Normalize time to 00:00:00
+
+      const newOrders = [];
+
+      while (currentDate < newEndDate) { // Use `<` instead of `<=` to avoid duplicate orders
+        const dayOfWeek = currentDate.getDay();
+        if (allowedDays.includes(dayOfWeek)) {
+          const orderNumber = Math.floor(1000000000000000 + Math.random() * 9000000000000000).toString(); // Generate random 16-digit order number
+
+          newOrders.push({
+            subscriptionId: subscription.id,
+            restaurantId,
+            menuId,
+            addressId,
+            userId: consumerId,
+            orderDate: new Date(currentDate), // Use normalized date
+            status: 'pending',
+            orderNumber, // Use the generated order number
+          });
+        }
+        currentDate.setDate(currentDate.getDate() + 1); // Move to the next day
+      }
+
+      await Order.bulkCreate(newOrders);
+      console.log(`Created ${newOrders.length} new orders for subscription ${subscription.id}.`);
+    }
+  } catch (error) {
+    console.error('Error creating orders for extended days:', error);
+    throw error;
   }
 };

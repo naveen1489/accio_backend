@@ -156,7 +156,7 @@ router.put('/update/:id', authenticateToken, subscriptionController.updateSubscr
  *       500:
  *         description: Internal server error
  */
-router.patch('/:id/status', subscriptionController.updateSubscriptionStatus);
+router.patch('/:id/status',authenticateToken, subscriptionController.updateSubscriptionStatus);
 
 /**
  * @swagger
@@ -177,7 +177,7 @@ router.patch('/:id/status', subscriptionController.updateSubscriptionStatus);
  *       500:
  *         description: Internal server error
  */
-router.get('/menu/:menuId', subscriptionController.getSubscriptionsByMenuId);
+router.get('/menu/:menuId',authenticateToken, subscriptionController.getSubscriptionsByMenuId);
 
 /**
  * @swagger
@@ -198,11 +198,11 @@ router.get('/menu/:menuId', subscriptionController.getSubscriptionsByMenuId);
  *       500:
  *         description: Internal server error
  */
-router.get('/restaurant/:restaurantId', subscriptionController.getSubscriptionsByRestaurantId);
+router.get('/restaurant/:restaurantId',authenticateToken, subscriptionController.getSubscriptionsByRestaurantId);
 
 /**
  * @swagger
- * /api/subscriptions/user/{userId}:
+ * /api/subscriptions/user:
  *   get:
  *     summary: Get subscriptions by user ID
  *     tags: [Subscriptions]
@@ -219,7 +219,44 @@ router.get('/restaurant/:restaurantId', subscriptionController.getSubscriptionsB
  *       500:
  *         description: Internal server error
  */
-router.get('/user/:userId', subscriptionController.getSubscriptionsByUserId);
+router.get('/user',authenticateToken, subscriptionController.getSubscriptionsByUserId);
+/**
+ * @swagger
+ * /api/subscriptions/config:
+ *   get:
+ *     summary: Get subscription configuration
+ *     tags: [Subscriptions]
+ *     responses:
+ *       200:
+ *         description: Subscription configuration fetched successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 mealPlanConfig:
+ *                   type: object
+ *                   additionalProperties:
+ *                     type: integer
+ *                   example:
+ *                     "1 Week": 7
+ *                     "2 Week": 14
+ *                     "3 Week": 21
+ *                     "4 Week": 28
+ *                 mealFrequencyConfig:
+ *                   type: object
+ *                   additionalProperties:
+ *                     type: array
+ *                     items:
+ *                       type: integer
+ *                   example:
+ *                     "Mon-Fri": [1, 2, 3, 4, 5]
+ *                     "Mon-Sat": [1, 2, 3, 4, 5, 6]
+ *                     "Mon-Sun": [1, 2, 3, 4, 5, 6, 7]
+ *       500:
+ *         description: Internal server error
+ */
+router.get('/config',authenticateToken, subscriptionController.getSubscriptionConfig);
 
 /**
  * @swagger
@@ -242,7 +279,7 @@ router.get('/user/:userId', subscriptionController.getSubscriptionsByUserId);
  *       500:
  *         description: Internal server error
  */
-router.get('/:id', subscriptionController.getSubscriptionById);
+router.get('/:id',authenticateToken, subscriptionController.getSubscriptionById);
 
 /**
  * @swagger
@@ -283,7 +320,7 @@ router.get('/:id', subscriptionController.getSubscriptionById);
  *       500:
  *         description: Internal server error
  */
-router.patch('/:id/pause', subscriptionController.pauseSubscription);
+router.patch('/:id/pause',authenticateToken, subscriptionController.pauseSubscription);
 
 /**
  * @swagger
@@ -308,7 +345,7 @@ router.patch('/:id/pause', subscriptionController.pauseSubscription);
  *       500:
  *         description: Internal server error
  */
-router.patch('/:id/resume', subscriptionController.resumeSubscription);
+router.patch('/:id/resume',authenticateToken, subscriptionController.resumeSubscription);
 
 
 
@@ -356,6 +393,6 @@ router.patch('/:id/resume', subscriptionController.resumeSubscription);
  *       500:
  *         description: Internal server error
  */
-router.patch('/:id/payment-status', subscriptionController.updatePaymentStatus);
+router.patch('/:id/payment-status', authenticateToken, subscriptionController.updatePaymentStatus);
 
 module.exports = router;

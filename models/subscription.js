@@ -78,13 +78,9 @@ module.exports = (sequelize, DataTypes) => {
         ),
         defaultValue: "pending",
       },
-      pausedAt: {
-        type: DataTypes.DATE,
-        allowNull: true, // This field is set when the subscription is paused
-      },
-      pauseEndDate: {
-        type: DataTypes.DATE,
-        allowNull: true, // This field is set when the subscription is paused
+      pausedDates: {
+        type: DataTypes.JSON,
+        allowNull: true, // Array of paused dates
       },
       paymentAmount: {
         type: DataTypes.FLOAT, // Payment amount as a floating-point number

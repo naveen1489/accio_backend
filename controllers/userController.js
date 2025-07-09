@@ -2,7 +2,7 @@
 
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-const { User, OTP } = require('../models');
+const { User, OTP, Consumer, AdminMessage, Restaurant, DeliveryPartner } = require('../models');
 
 // Register Admin
 exports.registerAdmin = async (req, res) => {
@@ -162,7 +162,7 @@ exports.loginRestaurant = async (req, res) => {
   
       // Generate a JWT token with OTP pending verification
       const token = jwt.sign(
-        { username, otpVerified: false },
+        {id: user.id, username, otpVerified: false },
         process.env.JWT_SECRET,
         { expiresIn: '10m' } // Token expires in 10 minutes
       );
@@ -198,13 +198,76 @@ exports.loginRestaurant = async (req, res) => {
       if (new Date() > otpRecord.expiresAt) {
         return res.status(400).json({ message: 'OTP has expired' });
       }
+
+      // Find the user by username
+    const user = await User.findOne({ where: { username } });
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
   
       // OTP is valid, delete it from the database
       await otpRecord.destroy();
   
       // Generate a new JWT token with OTP verified
       const newToken = jwt.sign(
-        { username, otpVerified: true },
+        { id: user.id,username, otpVerified: true },
+        process.env.JWT_SECRET,
+        { expiresIn: '10m' } // Token expires in 10 minutes
+      );
+  
+      res.status(200).json({ message: 'OTP verified successfully', token: newToken });
+    } catch (error) {
+      console.error('Error verifying OTP:', error);
+      res.status(500).json({ message: 'Internal server error', error });
+    }
+  };
+
+  exports.verifyOtpForConsumerSignup = async (req, res) => {
+    try {
+      const { username, otp } = req.body;
+      const token = req.headers.authorization?.split(' ')[1];
+  
+      // Validate the JWT token
+      const decoded = jwt.verify(token, process.env.JWT_SECRET);
+      if (decoded.username !== username || decoded.otpVerified) {
+        return res.status(400).json({ message: 'Invalid or already verified token' });
+      }
+  
+      // Find the OTP record for the given username
+      const otpRecord = await OTP.findOne({ where: { username, otp } });
+      if (!otpRecord) {
+        return res.status(400).json({ message: 'Invalid OTP' });
+      }
+  
+      // Check if the OTP is expired
+      if (new Date() > otpRecord.expiresAt) {
+        return res.status(400).json({ message: 'OTP has expired' });
+      }
+
+      // Find the user by username
+    const user = await User.findOne({ where: { username } });
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+  
+
+    // Find the consumer by userId
+    const consumer = await Consumer.findOne({ where: { userId: user.id } });
+    if (!consumer) {
+      return res.status(404).json({ message: 'Consumer not found' });
+    }
+
+       // Update consumer status to Active
+    consumer.status = 'active';
+    await consumer.save();
+      // OTP is valid, delete it from the database
+      await otpRecord.destroy();
+
+
+  
+      // Generate a new JWT token with OTP verified
+      const newToken = jwt.sign(
+        { id: user.id,username, otpVerified: true },
         process.env.JWT_SECRET,
         { expiresIn: '10m' } // Token expires in 10 minutes
       );
@@ -220,6 +283,8 @@ exports.loginRestaurant = async (req, res) => {
     try {
       const { username, newPassword, confirmPassword } = req.body;
       const token = req.headers.authorization?.split(' ')[1];
+
+      const userId = req.user.id;
   
       // Validate the JWT token
       const decoded = jwt.verify(token, process.env.JWT_SECRET);
@@ -233,7 +298,7 @@ exports.loginRestaurant = async (req, res) => {
       }
   
       // Find the user by username
-      const user = await User.findOne({ where: { username, role: 'restaurant' } });
+      const user = await User.findOne({ where: { id: userId, username} });
       if (!user) {
         return res.status(404).json({ message: 'User not found' });
       }
@@ -249,31 +314,193 @@ exports.loginRestaurant = async (req, res) => {
     }
   };
 
-  exports.loginDeliveryPartner = async (req, res) => {
-    try {
-      const { phone } = req.body;
-  
-      // Find the delivery partner by phone
-      const deliveryPartner = await DeliveryPartner.findOne({ where: { phone, status: 'active' } });
-      if (!deliveryPartner) {
-        return res.status(404).json({ message: 'Delivery partner not found or inactive' });
-      }
-  
-      // Generate a 6-digit random OTP
-      const otp = Math.floor(100000 + Math.random() * 900000).toString();
-  
-      // Set OTP expiration time (e.g., 5 minutes from now)
-      const expiresAt = new Date(Date.now() + 5 * 60 * 1000);
-  
-      // Save the OTP in the database (or use a separate OTP table)
-      await OTP.create({ phone, otp, expiresAt });
-  
-      // Send OTP via SMS (replace with actual SMS sending logic)
-      console.log(`Sending OTP ${otp} to phone ${phone}`);
-  
-      res.status(200).json({ message: 'OTP sent successfully' });
-    } catch (error) {
-      console.error('Error during delivery partner login:', error);
-      res.status(500).json({ message: 'Internal server error', error });
+exports.loginDeliveryPartner = async (req, res) => {
+  try {
+    const { phone } = req.body;
+
+    // Validate required fields
+    if (!phone) {
+      return res.status(400).json({ message: 'Phone is required' });
     }
-  };
+
+    // Find the delivery partner by phone
+    const deliveryPartner = await DeliveryPartner.findOne({ where: { phone, status: 'active' } });
+    if (!deliveryPartner) {
+      return res.status(404).json({ message: 'Delivery partner not found or inactive' });
+    }
+
+    // Generate a 6-digit random OTP
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+
+    // Set OTP expiration time (e.g., 5 minutes from now)
+    const expiresAt = new Date(Date.now() + 5 * 60 * 1000);
+
+    // Save the OTP in the database (use phone as username)
+    await OTP.create({ username: phone, otp, expiresAt });
+
+    // Send OTP via SMS (replace with actual SMS sending logic)
+    console.log(`Sending OTP ${otp} to phone ${phone}`);
+
+    res.status(200).json({ message: 'OTP sent successfully' });
+  } catch (error) {
+    console.error('Error during delivery partner login:', error);
+    res.status(500).json({ message: 'Internal server error', error });
+  }
+};
+
+exports.verifyOtpForDeliveryLogin = async (req, res) => {
+  try {
+    const { phone, otp } = req.body;
+
+    // Validate required fields
+    if (!phone || !otp) {
+      return res.status(400).json({ message: 'Phone and OTP are required' });
+    }
+
+    // Find the OTP record for the given phone number (stored in the username column)
+    const otpRecord = await OTP.findOne({ where: { username: phone, otp } });
+    if (!otpRecord) {
+      return res.status(400).json({ message: 'Invalid OTP' });
+    }
+
+    // Check if the OTP is expired
+    if (new Date() > otpRecord.expiresAt) {
+      return res.status(400).json({ message: 'OTP has expired' });
+    }
+
+    // Find the delivery partner by phone
+    const deliveryPartner = await DeliveryPartner.findOne({ where: { phone, status: 'active' } });
+    if (!deliveryPartner) {
+      return res.status(404).json({ message: 'Delivery partner not found or inactive' });
+    }
+
+    // OTP is valid, delete it from the database
+    await otpRecord.destroy();
+
+    // Generate a JWT token for the delivery partner
+    const token = jwt.sign(
+      { id: deliveryPartner.id, phone: deliveryPartner.phone, role: 'deliveryPartner' },
+      process.env.JWT_SECRET,
+      { expiresIn: '1d' } // Token expires in 1 day
+    );
+
+    res.status(200).json({ message: 'OTP verified successfully', token });
+  } catch (error) {
+    console.error('Error verifying OTP for delivery login:', error);
+    res.status(500).json({ message: 'Internal server error', error });
+  }
+};
+
+  exports.sendMessageToAdmin = async (req, res) => {
+  try {
+    const userId = req.user.id; // Extract userId from JWT
+    const { message, emailId } = req.body;
+
+    // Validate required fields
+    if (!message || !emailId) {
+      return res.status(400).json({ message: 'Message and emailId are required' });
+    }
+
+    // Determine user role and fetch name accordingly
+    const userRole = req.user.role; // Assuming role is set in JWT
+    let name;
+
+    if (userRole === 'restaurant') {
+      const restaurant = await Restaurant.findOne({ where: { userId } });
+      if (!restaurant) {
+        return res.status(404).json({ message: 'Restaurant not found for the user' });
+      }
+      name = restaurant.name; // Fetch name from Restaurant table
+    } else if (userRole === 'customer') {
+      const consumer = await Consumer.findOne({ where: { userId } });
+      if (!consumer) {
+        return res.status(404).json({ message: 'Consumer not found for the user' });
+      }
+      name = consumer.name; // Fetch name from Consumer table
+    } else {
+      return res.status(400).json({ message: 'Invalid user role' });
+    }
+
+    // Save the message to the database (assuming AdminMessage model exists)
+    const adminMessage = await AdminMessage.create({
+      userId,
+      message,
+      emailId,
+      userRole,
+      name,
+    });
+
+    res.status(201).json({ message: 'Message sent to admin successfully', adminMessage });
+  } catch (error) {
+    console.error('Error sending message to admin:', error);
+    res.status(500).json({ message: 'Internal server error', error });
+  }
+};
+exports.getMessagesToAdmin = async (req, res) => {
+  try {
+    const { page = 1, limit = 10 } = req.query; // Pagination parameters
+
+    // Fetch messages with pagination
+    const offset = (page - 1) * limit;
+    const messages = await AdminMessage.findAndCountAll({
+      limit: parseInt(limit),
+      offset: parseInt(offset),
+      order: [['createdAt', 'DESC']], // Sort messages by creation date (newest first)
+    });
+
+    // Format messages with extra details based on userRole
+    const formattedMessages = await Promise.all(
+      messages.rows.map(async (message) => {
+        const messageObj = message.toJSON();
+        const userRole = messageObj.userRole;
+        let userDetails = null;
+
+        if (userRole === 'restaurant') {
+             const restaurant = await Restaurant.findOne({
+            where: { userId: messageObj.userId },
+            attributes: ['name', 'contactNumber', 'emailId', 'companyName', 'imageUrl'],
+          });
+          userDetails = restaurant
+            ? {
+                name: restaurant.name,
+                mobile: restaurant.contactNumber,
+                email: restaurant.emailId,
+                companyName: restaurant.companyName,
+                profilePic: restaurant.imageUrl,
+              }
+            : null;
+        } else if (userRole === 'customer') {
+       const consumer = await Consumer.findOne({
+            where: { userId: messageObj.userId },
+            attributes: ['name', 'mobile', 'email', 'profilePic'],
+          });
+          userDetails = consumer
+            ? {
+                name: consumer.name,
+                mobile: consumer.mobile,
+                email: consumer.email,
+                profilePic: consumer.profilePic,
+              }
+            : null;
+        }
+
+        return {
+          ...messageObj,
+          userDetails,
+        };
+      })
+    );
+
+    res.status(200).json({
+      message: 'Messages fetched successfully',
+      totalMessages: messages.count,
+      totalPages: Math.ceil(messages.count / limit),
+      currentPage: parseInt(page),
+      messages: formattedMessages,
+    });
+  } catch (error) {
+    console.error('Error fetching messages to admin:', error);
+    res.status(500).json({ message: 'Internal server error', error });
+  }
+};
+
