@@ -124,6 +124,7 @@ exports.assignOrderToDeliveryPartner = async (req, res) => {
 exports.getOrdersForDeliveryPartner = async (req, res) => {
     try {
       const { deliveryPartnerId } = req.params;
+       const userId = req.user.id;
   
       // Find all orders assigned to the delivery partner
       const orders = await Order.findAll({
@@ -367,7 +368,7 @@ exports.getComplaintsByRestaurant = async (req, res) => {
         {
           model: Consumer,
           as: 'consumer',
-          attributes: ['id', 'name'], // Include consumer name
+          attributes: ['id', 'name', 'mobile'], // Include consumer name
         },
         {
           model: Menu,
