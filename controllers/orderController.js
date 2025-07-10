@@ -365,6 +365,11 @@ exports.getComplaintsByRestaurant = async (req, res) => {
       offset: parseInt(offset),
       order: [['createdAt', 'DESC']],
       include: [
+           {
+          model: Order,
+          as: 'order',
+          attributes: ['id', 'orderNumber'], // Include consumer name
+        },
         {
           model: Consumer,
           as: 'consumer',
