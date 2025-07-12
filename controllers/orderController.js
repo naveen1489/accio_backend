@@ -141,7 +141,7 @@ exports.getOrdersForDeliveryPartner = async (req, res) => {
           model: Menu,
           as: 'menu',
           attributes: ['id', 'menuName', 'price'], // Include menu details
-          where: categoryName ? { categoryName } : {}, // Filter by category if provided
+      
         },
         {
           model: Subscription,
