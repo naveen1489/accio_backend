@@ -297,5 +297,5 @@ router.put('/update/:id', authenticateToken, deliveryPartnerController.updateDel
  */
 
 // Route definition
-router.get('/profile', authMiddleware, deliveryPartnerController.getProfile);
+router.get('/profile', authenticateToken, deliveryPartnerController.getProfile);
 module.exports = router;
