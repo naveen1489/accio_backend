@@ -86,16 +86,7 @@ exports.addDeliveryPartner = async (req, res) => {
       return res.status(400).json({ message: 'A delivery partner with the same email or phone already exists' });
     }
 
-    // Create a new DeliveryPartner record
-    const newPartner = await models.DeliveryPartner.create({
-      name,
-      email,
-      phone,
-      restaurantId,
-      status: status || 'inactive',
-      workingHoursStart,
-      workingHoursEnd,
-    });
+   
 
     // Create a corresponding entry in the User table
     const newUser = await models.User.create({
@@ -105,6 +96,17 @@ exports.addDeliveryPartner = async (req, res) => {
       status: 'active', // Default status
     });
 
+     // Create a new DeliveryPartner record
+    const newPartner = await models.DeliveryPartner.create({
+      name,
+      email,
+      phone,
+      restaurantId,
+      status: status || 'inactive',
+      workingHoursStart,
+      workingHoursEnd,
+      userId: newUser.id, // Associate the delivery partner with the newly created user
+    });
     res.status(200).json({
       message: 'Delivery partner added successfully',
       deliveryPartner: newPartner,
