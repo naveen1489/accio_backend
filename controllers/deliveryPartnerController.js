@@ -273,3 +273,35 @@ exports.updateDeliveryPartnerDetails = async (req, res) => {
     res.status(500).json({ message: 'Internal server error', error });
   }
 };
+
+exports.getProfile = async (req, res) => {
+  try {
+    const userId = req.user.id;
+
+    // Find the delivery partner by userId
+    const deliveryPartner = await models.DeliveryPartner.findOne({
+      where: { userId },
+      include: [
+        {
+          model: models.Restaurant,
+          as: 'restaurant',
+          attributes: ['id', 'name', 'companyName'],
+        },
+        {
+          model: models.User,
+          as: 'user',
+          attributes: ['id', 'username', 'role', 'status'],
+        },
+      ],
+    });
+
+    if (!deliveryPartner) {
+      return res.status(404).json({ message: 'Delivery partner profile not found' });
+    }
+
+    res.status(200).json({ profile: deliveryPartner });
+  } catch (error) {
+    console.error('Error fetching delivery partner profile:', error);
+    res.status(500).json({ message: 'Internal server error', error });
+  }
+};
