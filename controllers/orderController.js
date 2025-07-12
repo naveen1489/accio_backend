@@ -132,22 +132,43 @@ exports.getOrdersForDeliveryPartner = async (req, res) => {
     }
     const deliveryPartnerId = deliveryPartner.id;
 
-    // Find all orders assigned to the delivery partner
+     // Query the orders with filters and include related details
     const orders = await Order.findAll({
-      where: { deliveryPartnerId },
+      where: filters,
       include: [
         {
           model: Menu,
           as: 'menu',
-          attributes: ['id', 'name', 'price', 'description', 'categoryName'],
+          attributes: ['id', 'menuName', 'price'], // Include menu details
+          where: categoryName ? { categoryName } : {}, // Filter by category if provided
+        },
+        {
+          model: Subscription,
+          as: 'subscription',
+          attributes: ['id', 'mealPlan', 'mealFrequency'], // Include subscription details
+        },
+        {
+          model: DeliveryPartner,
+          as: 'deliveryPartner',
+          attributes: ['id', 'name'], // Include delivery partner name
         },
         {
           model: Restaurant,
           as: 'restaurant',
-          attributes: ['id', 'name', 'addressLine1', 'city', 'state', 'postalCode'],
+          attributes: ['id', 'name'], // Include restaurant details
+        },
+        {
+          model: Consumer,
+          as: 'consumer',
+          attributes: ['id', 'name'], // Include consumer name
+        },
+        {
+          model: Address,
+          as: 'address', // Include address details
         },
       ],
     });
+
 
     res.status(200).json({ message: 'Orders fetched successfully', orders });
   } catch (error) {
