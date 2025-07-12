@@ -85,17 +85,11 @@ router.patch('/assign', orderController.assignOrderToDeliveryPartner);
 
 /**
  * @swagger
- * /api/orders/delivery-partner/{deliveryPartnerId}:
+ * /api/orders/delivery-partner
  *   get:
  *     summary: Get orders for a delivery partner
  *     tags: [Orders]
- *     parameters:
- *       - in: path
- *         name: deliveryPartnerId
- *         required: true
- *         schema:
- *           type: string
- *         description: ID of the delivery partner
+
  *     responses:
  *       200:
  *         description: Orders fetched successfully
@@ -104,7 +98,7 @@ router.patch('/assign', orderController.assignOrderToDeliveryPartner);
  *       500:
  *         description: Internal server error
  */
-router.get('/orders/delivery-partner/:deliveryPartnerId', orderController.getOrdersForDeliveryPartner);
+router.get('/orders/delivery-partner',authMiddleware,  orderController.getOrdersForDeliveryPartner);
 
 /**
  * @swagger

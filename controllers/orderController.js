@@ -122,33 +122,39 @@ exports.assignOrderToDeliveryPartner = async (req, res) => {
 };
 
 exports.getOrdersForDeliveryPartner = async (req, res) => {
-    try {
-      const { deliveryPartnerId } = req.params;
-       const userId = req.user.id;
-  
-      // Find all orders assigned to the delivery partner
-      const orders = await Order.findAll({
-        where: { deliveryPartnerId },
-        include: [
-          {
-            model: Menu,
-            as: 'menu',
-            attributes: ['id', 'name', 'price', 'description', 'categoryName'], // Include menu details
-          },
-          {
-            model: Restaurant,
-            as: 'restaurant',
-            attributes: ['id', 'name', 'addressLine1', 'city', 'state', 'postalCode'], // Include restaurant details
-          },
-        ],
-      });
-  
-      res.status(200).json({ message: 'Orders fetched successfully', orders });
-    } catch (error) {
-      console.error('Error fetching orders for delivery partner:', error);
-      res.status(500).json({ message: 'Internal server error', error });
+  try {
+    const userId = req.user.id;
+
+    // Find the delivery partner by userId
+    const deliveryPartner = await DeliveryPartner.findOne({ where: { userId } });
+    if (!deliveryPartner) {
+      return res.status(404).json({ message: 'Delivery partner not found for the user' });
     }
-  };
+    const deliveryPartnerId = deliveryPartner.id;
+
+    // Find all orders assigned to the delivery partner
+    const orders = await Order.findAll({
+      where: { deliveryPartnerId },
+      include: [
+        {
+          model: Menu,
+          as: 'menu',
+          attributes: ['id', 'name', 'price', 'description', 'categoryName'],
+        },
+        {
+          model: Restaurant,
+          as: 'restaurant',
+          attributes: ['id', 'name', 'addressLine1', 'city', 'state', 'postalCode'],
+        },
+      ],
+    });
+
+    res.status(200).json({ message: 'Orders fetched successfully', orders });
+  } catch (error) {
+    console.error('Error fetching orders for delivery partner:', error);
+    res.status(500).json({ message: 'Internal server error', error });
+  }
+};
 
   exports.updateOrderStatusByDeliveryPartner = async (req, res) => {
     try {
@@ -365,7 +371,7 @@ exports.getComplaintsByRestaurant = async (req, res) => {
       offset: parseInt(offset),
       order: [['createdAt', 'DESC']],
       include: [
-           {
+        {
           model: Order,
           as: 'order',
           attributes: ['id', 'orderNumber'], // Include consumer name
