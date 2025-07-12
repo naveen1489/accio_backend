@@ -131,10 +131,11 @@ exports.getOrdersForDeliveryPartner = async (req, res) => {
       return res.status(404).json({ message: 'Delivery partner not found for the user' });
     }
     const deliveryPartnerId = deliveryPartner.id;
+     
 
-     // Query the orders with filters and include related details
+    // Query the orders with filters and include related details
     const orders = await Order.findAll({
-      where: filters,
+      where: { deliveryPartnerId },
       include: [
         {
           model: Menu,
@@ -168,7 +169,6 @@ exports.getOrdersForDeliveryPartner = async (req, res) => {
         },
       ],
     });
-
 
     res.status(200).json({ message: 'Orders fetched successfully', orders });
   } catch (error) {
