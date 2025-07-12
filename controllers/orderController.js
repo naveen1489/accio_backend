@@ -156,12 +156,12 @@ exports.getOrdersForDeliveryPartner = async (req, res) => {
         {
           model: Restaurant,
           as: 'restaurant',
-          attributes: ['id', 'name'], // Include restaurant details
+          attributes: ['id', 'name', 'companyName'], // Include restaurant details
         },
         {
           model: Consumer,
           as: 'consumer',
-          attributes: ['id', 'name'], // Include consumer name
+          attributes: ['id', 'name','mobile'], // Include consumer name
         },
         {
           model: Address,
