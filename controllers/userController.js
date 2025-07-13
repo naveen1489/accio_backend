@@ -454,7 +454,13 @@ exports.verifyOtpForDeliveryLogin = async (req, res) => {
     const userRole = req.user.role; // Assuming role is set in JWT
     let name;
 
-    if (userRole === 'restaurant') {
+     if (userRole === 'delivery') {
+      const delivery = await DeliveryPartner.findOne({ where: { userId } });
+      if (!delivery) {
+        return res.status(404).json({ message: 'Restaurant not found for the user' });
+      }
+      name = delivery.name; // Fetch name from Restaurant table
+    } else if (userRole === 'restaurant') {
       const restaurant = await Restaurant.findOne({ where: { userId } });
       if (!restaurant) {
         return res.status(404).json({ message: 'Restaurant not found for the user' });
