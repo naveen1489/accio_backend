@@ -285,7 +285,7 @@ exports.getProfile = async (req, res) => {
         {
           model: models.Restaurant,
           as: 'restaurant',
-          attributes: ['id', 'name', 'companyName', 'status'],
+      
         },
         {
           model: models.User,
