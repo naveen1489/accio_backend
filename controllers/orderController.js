@@ -141,7 +141,13 @@ exports.getOrdersForDeliveryPartner = async (req, res) => {
           model: Menu,
           as: 'menu',
           attributes: ['id', 'menuName', 'price'], // Include menu details
-      
+      include: [
+            {
+              model: MenuCategory,
+              as: 'menuCategories',
+              attributes: ['categoryName'],
+            },
+          ],
         },
         {
           model: Subscription,
