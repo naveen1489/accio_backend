@@ -428,7 +428,7 @@ exports.verifyOtpForDeliveryLogin = async (req, res) => {
 
     // Generate a JWT token for the user
     const token = jwt.sign(
-      { id: user.id, phone: deliveryPartner.phone, role: 'deliveryPartner' },
+      { id: user.id, phone: deliveryPartner.phone, role: 'delivery' },
       process.env.JWT_SECRET,
       { expiresIn: '1d' } // Token expires in 1 day
     );
