@@ -285,7 +285,6 @@ exports.getProfile = async (req, res) => {
         {
           model: models.Restaurant,
           as: 'restaurant',
-      
         },
         {
           model: models.User,
@@ -299,7 +298,18 @@ exports.getProfile = async (req, res) => {
       return res.status(404).json({ message: 'Delivery partner profile not found' });
     }
 
-    res.status(200).json({ profile: deliveryPartner });
+    // Count completed orders for this delivery partner
+    const completedOrdersCount = await models.Order.count({
+      where: {
+        deliveryPartnerId: deliveryPartner.id,
+        status: 'completed', // Adjust if your completed status is different
+      },
+    });
+
+    res.status(200).json({ 
+      profile: deliveryPartner,
+      completedOrdersCount 
+    });
   } catch (error) {
     console.error('Error fetching delivery partner profile:', error);
     res.status(500).json({ message: 'Internal server error', error });
