@@ -310,10 +310,16 @@ exports.deleteMenu = async (req, res) => {
 exports.getMenusByRestaurant = async (req, res) => {
   try {
     const { restaurantId } = req.params;
+    const { status } = req.query;
+
+    const whereConditions = { restaurantId };
+    if (status) {
+      whereConditions.status = status;
+    }
 
     // Fetch menus for the restaurant
     const menus = await Menu.findAll({
-      where: { restaurantId },
+      where: whereConditions,
       include: [
         {
           model: MenuCategory,
