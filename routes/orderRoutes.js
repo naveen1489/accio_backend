@@ -85,11 +85,10 @@ router.patch('/assign', orderController.assignOrderToDeliveryPartner);
 
 /**
  * @swagger
- * /api/orders/delivery-partner
+ * /api/orders/delivery-partner:
  *   get:
  *     summary: Get orders for a delivery partner
  *     tags: [Orders]
-
  *     responses:
  *       200:
  *         description: Orders fetched successfully

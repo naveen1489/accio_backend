@@ -24,6 +24,7 @@ const statisticRoutes = require('./routes/statisticRoutes'); // Import statistic
 const consumerRoutes = require('./routes/consumerRoutes'); // Import consumer routes
 const orderRoutes = require('./routes/orderRoutes'); // Import order routes
 const testRoutes = require('./routes/testRoutes');
+const staticPagesRoutes = require('./routes/staticPagesRoutes'); // Import static pages routes
 const { swaggerUi, swaggerSpec } = require('./config/swagger'); // Import Swagger configuration
 const app = express();
 
@@ -47,6 +48,7 @@ app.use('/api/notifications', notificationRoutes); // Add notification routes
 app.use('/api/statistics', statisticRoutes); // Add statistic routes
 app.use('/api/consumers', consumerRoutes); // Add consumer routes
 app.use('/api/orders', orderRoutes);
+app.use('/api/static', staticPagesRoutes); // Add static pages routes
 
 // Include test routes only in non-production environments
 //if (process.env.NODE_ENV !== 'production') {
