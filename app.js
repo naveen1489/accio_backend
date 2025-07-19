@@ -24,6 +24,7 @@ const statisticRoutes = require('./routes/statisticRoutes'); // Import statistic
 const consumerRoutes = require('./routes/consumerRoutes'); // Import consumer routes
 const orderRoutes = require('./routes/orderRoutes'); // Import order routes
 const testRoutes = require('./routes/testRoutes');
+const awsUploadRoutes = require('./routes/AwsUploadRoutes'); // Import AWS upload routes
 const { swaggerUi, swaggerSpec } = require('./config/swagger'); // Import Swagger configuration
 const app = express();
 
@@ -51,6 +52,7 @@ app.use('/api/orders', orderRoutes);
 // Include test routes only in non-production environments
 //if (process.env.NODE_ENV !== 'production') {
   app.use('/api/test', testRoutes);
+  app.use('/api/image', awsUploadRoutes);
 // Swagger UI setup
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 

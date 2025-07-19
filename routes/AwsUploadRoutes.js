@@ -1,6 +1,7 @@
+'use strict';
 const express = require('express');
 const router = express.Router();
-const testController = require('../controllers/AwsUploadController');
+const AwsUploadController = require('../controllers/AwsUploadController');
 const multer = require("multer");
 const upload = multer();
 /**
@@ -11,3 +12,5 @@ const upload = multer();
  */
 
 router.post("/upload", upload.single("file"), AwsUploadController.uploadProfileImage);
+
+module.exports = router;

@@ -17,9 +17,10 @@ const uploadFileToR2 = async (buffer, fileName, mimeType) => {
     Body: buffer,
     ContentType: mimeType,
   };
-  await s3.upload(params).promise();
-  const publicUrl = `https://${process.env.R2_ACCOUNT_ID}.r2.dev/${process.env.R2_BUCKET_NAME}/${fileName}`;
-  return { publicUrl };
+  return s3.upload(params).promise();
+ //await s3.upload(params).promise();
+  //const publicUrl = `https://${process.env.R2_ACCOUNT_ID}.r2.dev/${process.env.R2_BUCKET_NAME}/${fileName}`;
+  //return { publicUrl };
 };
 
 const deleteFileInR2 = async (fileName) => {

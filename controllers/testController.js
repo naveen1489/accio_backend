@@ -2,7 +2,7 @@
 
 const { User } = require('../models'); // Assuming you have a User model
 const multer = require("multer");
-//const { uploadFileToR2 } = require("../services/r2"); // Adjust the path as necessary
+const { uploadFileToR2 } = require("../services/r2"); // Adjust the path as necessary
 const { v4: uuidv4 } = require("uuid");
 const AWS = require("aws-sdk");
 
@@ -53,7 +53,8 @@ exports.uploadProfileImage = async (req, res) => {
     const extension = file.originalname.split(".").pop();
     const filename = `profile_${Date.now()}_${uuid}.${extension}`;
     const result = await uploadFileToR2(file.buffer, filename, file.mimetype);
-    if (!result || !result.publicUrl) {
+    //console.log("File uploaded to R2:", result);
+    /* if (!result || !result.publicUrl) {
       return res.status(500).json({ error: "Failed to upload file" });
     } 
     const publicUrl = result.publicUrl;
@@ -63,10 +64,10 @@ exports.uploadProfileImage = async (req, res) => {
       originalName: file.originalname,
       uuid,
       url: publicUrl,
-    };
-    console.log("File uploaded successfully:", saved);
+    }; */
+   console.log("File uploaded successfully:", result.Key);
     // send back the saved object
-    res.status(200).json({ message: "Upload successful", file: publicUrl });
+    res.status(200).json({ message: "Upload successful", file: result.Key });
   } catch (err) {
     console.error("Upload error:", err);
     res.status(500).json({ error: "Upload failed" });
