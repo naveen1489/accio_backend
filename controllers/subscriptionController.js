@@ -450,8 +450,24 @@ exports.pauseSubscription = async (req, res) => {
     // Calculate the number of paused delivery days
     const pausedDaysCount = pausedDeliveryDays.length;
 
-    // Update the subscription end date based on paused delivery days
-    subscription.endDate = new Date(new Date(endDate).getTime() + pausedDaysCount * 24 * 60 * 60 * 1000); // Extend endDate
+    // Fetch the restaurant to get close dates
+    const restaurant = await Restaurant.findByPk(subscription.restaurantId);
+    let closeStart = restaurant?.closeStartDate ? new Date(restaurant.closeStartDate) : null;
+    let closeEnd = restaurant?.closeEndDate ? new Date(restaurant.closeEndDate) : null;
+
+    // Update the subscription end date based on paused delivery days, considering meal frequency and restaurant close days
+    let newEndDate = new Date(endDate);
+    let added = 0;
+    while (added < pausedDaysCount) {
+      newEndDate.setDate(newEndDate.getDate() + 1);
+      const dayOfWeek = newEndDate.getDay();
+      const isAllowedDay = allowedDays.includes(dayOfWeek);
+      const isClosed = closeStart && closeEnd && newEndDate >= closeStart && newEndDate <= closeEnd;
+      if (isAllowedDay && !isClosed) {
+        added++;
+      }
+    }
+    subscription.endDate = newEndDate; // Set the new end date
     subscription.pausedDates = pausedDeliveryDays; // Save the array of paused delivery days
     await subscription.save();
 // Create new orders for the extended days
