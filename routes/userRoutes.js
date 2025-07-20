@@ -179,7 +179,7 @@ router.post('/login-delivery', userController.loginDeliveryPartner);
 
 /**
  * @swagger
- * /api/users/send-otp:
+ * /api/users/send-otp-forgot-password:
  *   post:
  *     summary: Send OTP to a restaurant partner
  *     tags: [Users]
@@ -200,7 +200,35 @@ router.post('/login-delivery', userController.loginDeliveryPartner);
  *       500:
  *         description: Internal server error
  */
-router.post('/send-otp', userController.sendOtp);
+router.post('/send-otp-forgot-password', userController.sendOtpForForgotPassword);
+
+
+
+/**
+ * @swagger
+ * /api/users/send-otp-consumer-signup:
+ *   post:
+ *     summary: Send OTP to a restaurant partner
+ *     tags: [Users]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               phone:
+ *                 type: string
+ *           example:
+ *             phone: "9876543210"
+ *     responses:
+ *       200:
+ *         description: OTP sent successfully
+ *       500:
+ *         description: Internal server error
+ */
+router.post('/send-otp-consumer-signup', userController.sendOtpForConsumerSignup);
+
 
 /**
  * @swagger

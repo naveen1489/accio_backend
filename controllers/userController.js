@@ -3,6 +3,7 @@
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { User, OTP, Consumer, AdminMessage, Restaurant, DeliveryPartner } = require('../models');
+const OTPService = require('../services/otpService');
 
 // Register Admin
 exports.registerAdmin = async (req, res) => {
@@ -130,7 +131,7 @@ exports.loginRestaurant = async (req, res) => {
   };
   
 
-  exports.sendOtp = async (req, res) => {
+  exports.sendOtpForForgotPassword = async (req, res) => {
     try {
       const { username } = req.body;
 
@@ -142,7 +143,7 @@ exports.loginRestaurant = async (req, res) => {
   
       // Generate a 6-digit random OTP
       //const otp = Math.floor(100000 + Math.random() * 900000).toString();
-      const otp = "123456"; // For testing purposes, use a fixed OTP
+      const otp = OTPService.generateOTP(); // Use OTPService
       // Set expiration time (90 seconds from now)
       const expiresAt = new Date(Date.now() + 90 * 1000);
   
@@ -169,6 +170,58 @@ exports.loginRestaurant = async (req, res) => {
   
       // Send OTP via SMS (replace with actual SMS sending logic)
       console.log(`Sending OTP ${otp} to user ${username}`);
+
+      OTPService.sendOTP(username, otp,OTPService.SmsTemplate.FORGOT_PASSWORD);
+  
+      res.status(200).json({ message: 'OTP sent successfully', token });
+    } catch (error) {
+      console.error('Error sending OTP:', error);
+      res.status(500).json({ message: 'Internal server error', error });
+    }
+  };
+
+
+  exports.sendOtpForConsumerSignup = async (req, res) => {
+    try {
+      const { username } = req.body;
+
+        // Check if the username exists in the User table
+    const user = await User.findOne({ where: { username } });
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+  
+      // Generate a 6-digit random OTP
+      //const otp = Math.floor(100000 + Math.random() * 900000).toString();
+      const otp = OTPService.generateOTP(); // Use OTPService
+      // Set expiration time (90 seconds from now)
+      const expiresAt = new Date(Date.now() + 90 * 1000);
+  
+ // Check if an OTP record already exists for the username
+ const existingOtp = await OTP.findOne({ where: { username } });
+
+
+ if (existingOtp) {
+  // Update the existing OTP record
+  existingOtp.otp = otp;
+  existingOtp.expiresAt = expiresAt;
+  await existingOtp.save();
+} else {
+  // Create a new OTP record
+  await OTP.create({ username, otp, expiresAt });
+}
+  
+      // Generate a JWT token with OTP pending verification
+      const token = jwt.sign(
+        {id: user.id, username, otpVerified: false },
+        process.env.JWT_SECRET,
+        { expiresIn: '10m' } // Token expires in 10 minutes
+      );
+  
+      // Send OTP via SMS (replace with actual SMS sending logic)
+      console.log(`Sending OTP ${otp} to user ${username}`);
+      
+      OTPService.sendOTP(username, otp,OTPService.SmsTemplate.ACCOUNT_VERIFICATION);
   
       res.status(200).json({ message: 'OTP sent successfully', token });
     } catch (error) {
@@ -189,7 +242,7 @@ exports.loginRestaurant = async (req, res) => {
       }
   
       // Find the OTP record for the given username
-      const otpRecord = await OTP.findOne({ where: { username, otp } });
+      const otpRecord = await OTPService.verifyOTP(username, otp); // Use OTPService
       if (!otpRecord) {
         return res.status(400).json({ message: 'Invalid OTP' });
       }
@@ -206,7 +259,7 @@ exports.loginRestaurant = async (req, res) => {
     }
   
       // OTP is valid, delete it from the database
-      await otpRecord.destroy();
+      await OTPService.deleteOTP(username); // Use OTPService
   
       // Generate a new JWT token with OTP verified
       const newToken = jwt.sign(
@@ -234,7 +287,7 @@ exports.loginRestaurant = async (req, res) => {
       }
   
       // Find the OTP record for the given username
-      const otpRecord = await OTP.findOne({ where: { username, otp } });
+      const otpRecord = await OTPService.verifyOTP(username, otp); // Use OTPService
       if (!otpRecord) {
         return res.status(400).json({ message: 'Invalid OTP' });
       }
@@ -261,7 +314,7 @@ exports.loginRestaurant = async (req, res) => {
     consumer.status = 'active';
     await consumer.save();
       // OTP is valid, delete it from the database
-      await otpRecord.destroy();
+      await OTPService.deleteOTP(username); // Use OTPService
 
 
   
@@ -330,16 +383,17 @@ exports.loginDeliveryPartner = async (req, res) => {
     }
 
     // Generate a 6-digit random OTP
-    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    const otp = OTPService.generateOTP(); // Use OTPService
 
     // Set OTP expiration time (e.g., 5 minutes from now)
     const expiresAt = new Date(Date.now() + 5 * 60 * 1000);
 
     // Save the OTP in the database (use phone as username)
-    await OTP.create({ username: phone, otp, expiresAt });
+    await OTPService.saveOTP(phone, otp, expiresAt);
 
     // Send OTP via SMS (replace with actual SMS sending logic)
     console.log(`Sending OTP ${otp} to phone ${phone}`);
+    OTPService.sendOTP(phone, otp,OTPService.SmsTemplate.LOGIN);
 
     res.status(200).json({ message: 'OTP sent successfully' });
   } catch (error) {
@@ -348,48 +402,6 @@ exports.loginDeliveryPartner = async (req, res) => {
   }
 };
 
-exports.verifyOtpForDeliveryLoginOld = async (req, res) => {
-  try {
-    const { phone, otp } = req.body;
-
-    // Validate required fields
-    if (!phone || !otp) {
-      return res.status(400).json({ message: 'Phone and OTP are required' });
-    }
-
-    // Find the OTP record for the given phone number (stored in the username column)
-    const otpRecord = await OTP.findOne({ where: { username: phone, otp } });
-    if (!otpRecord) {
-      return res.status(400).json({ message: 'Invalid OTP' });
-    }
-
-    // Check if the OTP is expired
-    if (new Date() > otpRecord.expiresAt) {
-      return res.status(400).json({ message: 'OTP has expired' });
-    }
-
-    // Find the delivery partner by phone
-    const deliveryPartner = await DeliveryPartner.findOne({ where: { phone, status: 'active' } });
-    if (!deliveryPartner) {
-      return res.status(404).json({ message: 'Delivery partner not found or inactive' });
-    }
-
-    // OTP is valid, delete it from the database
-    await otpRecord.destroy();
-
-    // Generate a JWT token for the delivery partner
-    const token = jwt.sign(
-      { id: deliveryPartner.id, phone: deliveryPartner.phone, role: 'deliveryPartner' },
-      process.env.JWT_SECRET,
-      { expiresIn: '1d' } // Token expires in 1 day
-    );
-
-    res.status(200).json({ message: 'OTP verified successfully', token });
-  } catch (error) {
-    console.error('Error verifying OTP for delivery login:', error);
-    res.status(500).json({ message: 'Internal server error', error });
-  }
-};
 
 exports.verifyOtpForDeliveryLogin = async (req, res) => {
   try {
@@ -401,7 +413,7 @@ exports.verifyOtpForDeliveryLogin = async (req, res) => {
     }
 
     // Find the OTP record for the given phone number (stored in the username column)
-    const otpRecord = await OTP.findOne({ where: { username: phone, otp } });
+    const otpRecord = await OTPService.verifyOTP(phone, otp); // Use OTPService
     if (!otpRecord) {
       return res.status(400).json({ message: 'Invalid OTP' });
     }
@@ -424,7 +436,7 @@ exports.verifyOtpForDeliveryLogin = async (req, res) => {
     }
 
     // OTP is valid, delete it from the database
-    await otpRecord.destroy();
+    await OTPService.deleteOTP(phone); // Use OTPService
 
     // Generate a JWT token for the user
     const token = jwt.sign(
