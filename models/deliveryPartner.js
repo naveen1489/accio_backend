@@ -15,6 +15,11 @@ module.exports = (sequelize, DataTypes) => {
         as: 'deliveries',
       });
       DeliveryPartner.hasMany(models.Order, { foreignKey: 'deliveryPartnerId', as: 'orders' });
+     // A DeliveryPartner belongs to a User
+      DeliveryPartner.belongsTo(models.User, {
+        foreignKey: 'userId',
+        as: 'user',
+      });
     }
   }
 
@@ -58,6 +63,14 @@ module.exports = (sequelize, DataTypes) => {
         type: DataTypes.UUID,
         allowNull: false, // Foreign key to the Restaurants table
       },
+      userId: {
+        type: DataTypes.UUID,
+        allowNull: false, // Foreign key to the Users table
+        references: {
+          model: 'Users', // Table name (case-sensitive, check your actual table name)
+          key: 'id',
+        },
+      }
     },
     {
       sequelize,

@@ -90,9 +90,9 @@ exports.addRestaurantPartner = async (req, res) => {
 
         // Prepare email options
         const mailOptions = {
-            from: '"Accio" <youremail@gmail.com>', // Replace with your email
+            from: '"BlinkDish" <youremail@gmail.com>', // Replace with your email
             to: emailId, // Restaurant's email
-            subject: 'Welcome to Accio - Your Login Credentials',
+            subject: 'Welcome to BlinkDish - Your Login Credentials',
             html: addRestoEmailTemplate(name, companyName, contactNumber, randomPassword)
         };
 
@@ -124,7 +124,7 @@ const addRestoEmailTemplate = (name, companyName, username, password) => {
       <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Welcome to Accio</title>
+        <title>Welcome to BlinkDish</title>
         <style>
           body {
             font-family: Arial, sans-serif;
@@ -176,16 +176,16 @@ const addRestoEmailTemplate = (name, companyName, username, password) => {
       </head>
       <body>
         <div class="container">
-          <h1>Welcome to Accio!</h1>
+          <h1>Welcome to BlinkDish!</h1>
           <p>Dear ${name},</p>
-          <p>We are thrilled to welcome your restaurant, <strong>${companyName}</strong>, as a new partner at Accio. Together, we aim to deliver the best dining experiences to our customers.</p>
+          <p>We are thrilled to welcome your restaurant, <strong>${companyName}</strong>, as a new partner at BlinkDish. Together, we aim to deliver the best dining experiences to our customers.</p>
           <p>Here are your login credentials to access your account:</p>
           <p><strong>Username:</strong> ${username}</p>
           <p><strong>Password:</strong> ${password}</p>
           <p>Please log in using these credentials and update your password for security purposes.</p>
           <footer>
-            &copy; 2025 Accio. All rights reserved.<br>
-            <a href="https://www.accio.com/privacy-policy" target="_blank">Privacy Policy</a> | <a href="https://www.accio.com/terms-of-service" target="_blank">Terms of Service</a>
+            &copy; 2025 BlinkDish. All rights reserved.<br>
+            <a href="https://accio-backend.onrender.com/api/static/privacy-policy" target="_blank">Privacy Policy</a> | <a href="https://accio-backend.onrender.com/api/static/terms-and-conditions" target="_blank">Terms of Service</a>
           </footer>
         </div>
       </body>

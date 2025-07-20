@@ -567,7 +567,7 @@ exports.searchMenus = async (req, res) => {
         {
           model: Restaurant,
           as: 'restaurant',
-          attributes: ['id', 'name'],
+          attributes: ['id', 'name', 'companyName' ],
         },
       ],
     });
@@ -627,7 +627,7 @@ exports.getOrdersForConsumer = async (req, res) => {
         {
           model: Restaurant,
           as: 'restaurant',
-          attributes: ['id', 'name'],
+          attributes: ['id', 'name', 'companyName'],
         },
         {
               model: Subscription,
