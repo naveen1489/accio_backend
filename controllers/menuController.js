@@ -10,7 +10,7 @@ const {
   User,
   Discount,
 } = require("../models");
-
+const { deleteFileInR2 } = require("../services/r2");
 // const NotificationService = require('../services/notificationService');
 
 // Create a new menu
@@ -121,7 +121,7 @@ exports.updateMenu = async (req, res) => {
   console.log("Updating menu with body:", JSON.stringify(req.body, null, 2));
   try {
     const { id } = req.params;
-    const { menuName, vegNonVeg, menuCategories, price, restaurantId, discount, description } = req.body;
+    const { menuName, vegNonVeg, menuCategories, price, restaurantId, discount, description, imageUrl} = req.body;
 
     // Validate input data
     if (!menuName || !price || !restaurantId) {
@@ -135,15 +135,24 @@ exports.updateMenu = async (req, res) => {
     }
 
     // Update menu details
+    console.log("Menu imageUrl:", menu.imageUrl);
+    console.log("Menu imageUrl:", imageUrl);
     menu.menuName = menuName || menu.menuName;
     menu.vegNonVeg = vegNonVeg || menu.vegNonVeg;
     menu.price = price || menu.price;
     menu.description = description || menu.description; // Ensure description is updated
+    let delImage = false;
+    if(imageUrl && menu.imageUrl !== imageUrl){
+      delImage = menu.imageUrl;
+    }
+    menu.imageUrl = imageUrl || menu.imageUrl; // Ensure imageUrl is updated
+    
 
     // Set status to "Pending"
     menu.status = "Pending";
     
     await menu.save();
+    delImage ? await deleteFileInR2(delImage) : null;
 
     // Update menu items for existing categories
     if (menuCategories && menuCategories.length > 0) {
@@ -310,10 +319,16 @@ exports.deleteMenu = async (req, res) => {
 exports.getMenusByRestaurant = async (req, res) => {
   try {
     const { restaurantId } = req.params;
+    const { status } = req.query;
+
+    const whereConditions = { restaurantId };
+    if (status) {
+      whereConditions.status = status;
+    }
 
     // Fetch menus for the restaurant
     const menus = await Menu.findAll({
-      where: { restaurantId },
+      where: whereConditions,
       include: [
         {
           model: MenuCategory,

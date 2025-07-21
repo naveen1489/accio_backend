@@ -235,4 +235,67 @@ router.get('/all-delivery-partners', authenticateToken, deliveryPartnerControlle
  */
 router.put('/update/:id', authenticateToken, deliveryPartnerController.updateDeliveryPartnerDetails);
 
+
+/**
+ * @swagger
+ * /delivery-partner/profile:
+ *   get:
+ *     summary: Get profile of the logged-in delivery partner
+ *     tags:
+ *       - DeliveryPartner
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Delivery partner profile fetched successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 profile:
+ *                   type: object
+ *                   properties:
+ *                     id:
+ *                       type: string
+ *                     name:
+ *                       type: string
+ *                     email:
+ *                       type: string
+ *                     phone:
+ *                       type: string
+ *                     status:
+ *                       type: string
+ *                     workingHoursStart:
+ *                       type: string
+ *                     workingHoursEnd:
+ *                       type: string
+ *                     restaurant:
+ *                       type: object
+ *                       properties:
+ *                         id:
+ *                           type: string
+ *                         name:
+ *                           type: string
+ *                         companyName:
+ *                           type: string
+ *                     user:
+ *                       type: object
+ *                       properties:
+ *                         id:
+ *                           type: string
+ *                         username:
+ *                           type: string
+ *                         role:
+ *                           type: string
+ *                         status:
+ *                           type: string
+ *       404:
+ *         description: Delivery partner profile not found
+ *       500:
+ *         description: Internal server error
+ */
+
+// Route definition
+router.get('/profile', authenticateToken, deliveryPartnerController.getProfile);
 module.exports = router;

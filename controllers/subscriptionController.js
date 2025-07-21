@@ -410,53 +410,124 @@ exports.updateSubscriptionStatus = async (req, res) => {
   }
 };
 
+/**
+ * Helper to validate and parse paused dates from the request body.
+ * Returns an array of valid Date objects or sends a 400 response if invalid.
+ */
+function parseAndValidatePausedDates(pausedDates, res) {
+  if (!pausedDates || !Array.isArray(pausedDates) || pausedDates.length === 0) {
+    res.status(400).json({ message: 'An array of paused dates is required' });
+    return null;
+  }
+  // Convert to Date objects and filter out invalid dates
+  const validDates = pausedDates.map(date => new Date(date)).filter(date => !isNaN(date));
+  if (validDates.length !== pausedDates.length) {
+    res.status(400).json({ message: 'Invalid dates provided in the array' });
+    return null;
+  }
+  return validDates;
+}
+
+/**
+ * Helper to get allowed delivery days for a meal frequency.
+ * Returns an array of allowed days (0=Sunday, 1=Monday, ...).
+ */
+function getAllowedDeliveryDays(mealFrequency, res) {
+  const allowedDays = mealFrequencyConfig[mealFrequency];
+  if (!allowedDays) {
+    res.status(400).json({ message: `Invalid meal frequency: ${mealFrequency}` });
+    return null;
+  }
+  return allowedDays;
+}
+
+/**
+ * Helper to filter paused dates to only valid delivery days.
+ */
+function filterPausedDeliveryDays(validDates, allowedDays) {
+  return validDates.filter(date => allowedDays.includes(date.getDay()));
+}
+
+/**
+ * Helper to fetch the restaurant and its close dates.
+ */
+async function getRestaurantCloseDates(restaurantId) {
+  const restaurant = await Restaurant.findByPk(restaurantId);
+  let closeStart = restaurant?.closeStartDate ? new Date(restaurant.closeStartDate) : null;
+  let closeEnd = restaurant?.closeEndDate ? new Date(restaurant.closeEndDate) : null;
+  return { closeStart, closeEnd };
+}
+
+/**
+ * Helper to extend the subscription end date by the correct number of valid delivery days,
+ * skipping restaurant close days and non-delivery days.
+ */
+function calculateExtendedEndDate(originalEndDate, daysToAdd, allowedDays, closeStart, closeEnd) {
+  let newEndDate = new Date(originalEndDate);
+  let added = 0;
+  while (added < daysToAdd) {
+    newEndDate.setDate(newEndDate.getDate() + 1);
+    const dayOfWeek = newEndDate.getDay();
+    const isAllowedDay = allowedDays.includes(dayOfWeek);
+    const isClosed = closeStart && closeEnd && newEndDate >= closeStart && newEndDate <= closeEnd;
+    if (isAllowedDay && !isClosed) {
+      added++;
+    }
+  }
+  return newEndDate;
+}
+
+/**
+ * PATCH /subscriptions/:id/pause
+ * Pauses a subscription for specific dates, extends the end date, and updates orders.
+ */
 exports.pauseSubscription = async (req, res) => {
   try {
     const { id } = req.params; // Subscription ID
     const { pausedDates } = req.body; // Array of dates to be paused
 
-    // Validate the pausedDates array
-    if (!pausedDates || !Array.isArray(pausedDates) || pausedDates.length === 0) {
-      return res.status(400).json({ message: 'An array of paused dates is required' });
-    }
+    // Step 1: Validate and parse paused dates
+    const validDates = parseAndValidatePausedDates(pausedDates, res);
+    if (!validDates) return;
 
-    // Convert pausedDates to Date objects and validate each date
-    const validDates = pausedDates.map(date => new Date(date)).filter(date => !isNaN(date));
-    if (validDates.length !== pausedDates.length) {
-      return res.status(400).json({ message: 'Invalid dates provided in the array' });
-    }
-
-    // Find the subscription by ID
+    // Step 2: Find the subscription
     const subscription = await Subscription.findByPk(id);
     if (!subscription) {
       return res.status(404).json({ message: 'Subscription not found' });
     }
 
-    const { mealFrequency, endDate } = subscription;
+    // Step 3: Get allowed delivery days for the meal frequency
+    const allowedDays = getAllowedDeliveryDays(subscription.mealFrequency, res);
+    if (!allowedDays) return;
 
-    // Determine allowed days based on mealFrequency
-    const allowedDays = mealFrequencyConfig[mealFrequency];
-    if (!allowedDays) {
-      return res.status(400).json({ message: `Invalid meal frequency: ${mealFrequency}` });
-    }
+    // Step 4: Filter paused dates to only valid delivery days
+    const pausedDeliveryDays = filterPausedDeliveryDays(validDates, allowedDays);
 
-    // Filter pausedDates to include only valid delivery days
-    const pausedDeliveryDays = validDates.filter(date => allowedDays.includes(date.getDay()));
-
-// Mark orders for paused days as canceled
+    // Step 5: Mark orders for paused days as canceled
     await markOrdersAsCanceled(subscription.id, pausedDeliveryDays);
 
-
-    // Calculate the number of paused delivery days
+    // Step 6: Calculate the number of paused delivery days
     const pausedDaysCount = pausedDeliveryDays.length;
 
-    // Update the subscription end date based on paused delivery days
-    subscription.endDate = new Date(new Date(endDate).getTime() + pausedDaysCount * 24 * 60 * 60 * 1000); // Extend endDate
-    subscription.pausedDates = pausedDeliveryDays; // Save the array of paused delivery days
+    // Step 7: Fetch restaurant close dates
+    const { closeStart, closeEnd } = await getRestaurantCloseDates(subscription.restaurantId);
+
+    // Step 8: Extend the subscription end date, skipping close days and non-delivery days
+    const newEndDate = calculateExtendedEndDate(
+      subscription.endDate,
+      pausedDaysCount,
+      allowedDays,
+      closeStart,
+      closeEnd
+    );
+    subscription.endDate = newEndDate;
+    subscription.pausedDates = pausedDeliveryDays;
     await subscription.save();
-// Create new orders for the extended days
+
+    // Step 9: Create new orders for the extended days
     await createOrdersForExtendedDays(subscription, pausedDaysCount);
 
+    // Step 10: Respond with updated subscription
     res.status(200).json({
       message: 'Subscription end date updated successfully based on paused dates',
       subscription,

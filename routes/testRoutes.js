@@ -1,7 +1,8 @@
 const express = require('express');
 const router = express.Router();
 const testController = require('../controllers/testController');
-
+const multer = require("multer");
+const upload = multer();
 /**
  * @swagger
  * tags:
@@ -49,5 +50,7 @@ const testController = require('../controllers/testController');
  *         description: Internal server error
  */
 router.get('/users', testController.getAllUsers);
+//router.post('/upload', testController.uploadFile);
+router.post("/upload", upload.single("file"), testController.uploadProfileImage);
 
 module.exports = router;

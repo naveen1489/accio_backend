@@ -86,16 +86,7 @@ exports.addDeliveryPartner = async (req, res) => {
       return res.status(400).json({ message: 'A delivery partner with the same email or phone already exists' });
     }
 
-    // Create a new DeliveryPartner record
-    const newPartner = await models.DeliveryPartner.create({
-      name,
-      email,
-      phone,
-      restaurantId,
-      status: status || 'inactive',
-      workingHoursStart,
-      workingHoursEnd,
-    });
+   
 
     // Create a corresponding entry in the User table
     const newUser = await models.User.create({
@@ -105,6 +96,17 @@ exports.addDeliveryPartner = async (req, res) => {
       status: 'active', // Default status
     });
 
+     // Create a new DeliveryPartner record
+    const newPartner = await models.DeliveryPartner.create({
+      name,
+      email,
+      phone,
+      restaurantId,
+      status: status || 'inactive',
+      workingHoursStart,
+      workingHoursEnd,
+      userId: newUser.id, // Associate the delivery partner with the newly created user
+    });
     res.status(200).json({
       message: 'Delivery partner added successfully',
       deliveryPartner: newPartner,
@@ -268,6 +270,48 @@ exports.updateDeliveryPartnerDetails = async (req, res) => {
     res.status(200).json({ message: 'Delivery partner details updated successfully', deliveryPartner });
   } catch (error) {
     console.error('Error updating delivery partner details:', error);
+    res.status(500).json({ message: 'Internal server error', error });
+  }
+};
+
+exports.getProfile = async (req, res) => {
+  try {
+    const userId = req.user.id;
+
+    // Find the delivery partner by userId
+    const deliveryPartner = await models.DeliveryPartner.findOne({
+      where: { userId },
+      include: [
+        {
+          model: models.Restaurant,
+          as: 'restaurant',
+        },
+        {
+          model: models.User,
+          as: 'user',
+          attributes: ['id', 'username', 'role'],
+        },
+      ],
+    });
+
+    if (!deliveryPartner) {
+      return res.status(404).json({ message: 'Delivery partner profile not found' });
+    }
+
+    // Count completed orders for this delivery partner
+    const completedOrdersCount = await models.Order.count({
+      where: {
+        deliveryPartnerId: deliveryPartner.id,
+        status: 'completed', // Adjust if your completed status is different
+      },
+    });
+
+    res.status(200).json({ 
+      profile: deliveryPartner,
+      completedOrdersCount 
+    });
+  } catch (error) {
+    console.error('Error fetching delivery partner profile:', error);
     res.status(500).json({ message: 'Internal server error', error });
   }
 };
