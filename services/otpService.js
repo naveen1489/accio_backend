@@ -87,7 +87,7 @@ class OTPService {
     switch (templateType) {
       case SmsTemplate.ACCOUNT_VERIFICATION:
         text = `Hello, ${otp} is the OTP for ACCIOSTIC MEALS account verification using your phone number. Do not share it to anyone.`;
-        dltTemplateId = process.env.SMS_DLT_TEMPLATE_ID_VERIFICATION || '1707175110235227473';
+        dltTemplateId = process.env.SMS_DLT_TEMPLATE_ID_VERIFICATION || '1707175333669518092';
         break;
       case SmsTemplate.FORGOT_PASSWORD:
         text = `Your OTP to generate new password is ${otp} ACCIOSTIC MEALS`;
