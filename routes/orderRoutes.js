@@ -13,8 +13,10 @@ const authMiddleware  = require('../middlewares/authMiddleware');
  * @swagger
  * /api/orders:
  *   get:
- *     summary: Get orders with filters
+ *     summary: Get orders with filters and pagination
  *     tags: [Orders]
+ *     security:
+ *       - bearerAuth: []
  *     parameters:
  *       - in: query
  *         name: categoryName
@@ -43,9 +45,38 @@ const authMiddleware  = require('../middlewares/authMiddleware');
  *         schema:
  *           type: string
  *         description: Filter by order ID
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           default: 1
+ *         description: Page number for pagination
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 10
+ *         description: Number of items per page
  *     responses:
  *       200:
  *         description: Orders fetched successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                 totalOrders:
+ *                   type: integer
+ *                 totalPages:
+ *                   type: integer
+ *                 currentPage:
+ *                   type: integer
+ *                 orders:
+ *                   type: array
+ *                   items:
+ *                     type: object
  *       500:
  *         description: Internal server error
  */
@@ -87,17 +118,49 @@ router.patch('/assign', orderController.assignOrderToDeliveryPartner);
  * @swagger
  * /api/orders/delivery-partner:
  *   get:
- *     summary: Get orders for a delivery partner
+ *     summary: Get orders for a delivery partner with pagination
  *     tags: [Orders]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           default: 1
+ *         description: Page number for pagination
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 10
+ *         description: Number of items per page
  *     responses:
  *       200:
  *         description: Orders fetched successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                 totalOrders:
+ *                   type: integer
+ *                 totalPages:
+ *                   type: integer
+ *                 currentPage:
+ *                   type: integer
+ *                 orders:
+ *                   type: array
+ *                   items:
+ *                     type: object
  *       404:
  *         description: Delivery partner not found
  *       500:
  *         description: Internal server error
  */
-router.get('/orders/delivery-partner',authMiddleware,  orderController.getOrdersForDeliveryPartner);
+router.get('/delivery-partner',authMiddleware,  orderController.getOrdersForDeliveryPartner);
 
 /**
  * @swagger
