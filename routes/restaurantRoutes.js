@@ -387,19 +387,18 @@ router.patch('/start-subscription', authenticateToken, restaurantController.star
  *           schema:
  *             type: object
  *             properties:
- *               closeStartDate:
- *                 type: string
- *                 format: date
- *                 example: "2025-06-01"
- *               closeEndDate:
- *                 type: string
- *                 format: date
- *                 example: "2025-06-10"
+ *               closeDays:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *                   format: date
+ *                 example: ["2025-06-01", "2025-06-02", "2025-06-03"]
+ *                 description: Array of dates when restaurant will be closed
  *     responses:
  *       200:
  *         description: Close dates updated successfully
  *       400:
- *         description: Missing required fields
+ *         description: Missing required fields or invalid closeDays array
  *       404:
  *         description: Restaurant not found
  *       500:
