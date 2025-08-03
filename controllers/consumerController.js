@@ -4,6 +4,7 @@ const {Order, User, Consumer, Address, Restaurant , Menu, MenuCategory, Subscrip
 const { Op } = require('sequelize');
 const haversine = require('haversine-distance'); // Use haversine-distance for distance calculation
 const { distanceThreshold } = require('../config/applicationConfig');
+const { deleteFileInR2 } = require('../services/r2');
 
 // Create consumer
 exports.createConsumer = async (req, res) => {
@@ -91,13 +92,19 @@ exports.loginConsumer = async (req, res) => {
 // Update consumer
 exports.updateConsumer = async (req, res) => {
   try {
-    const userId = req.user.id; 
+    const userId = req.user.id;
     const { name, mobile, email, profilePic, status } = req.body;
 
     // Find the consumer by userId (not by PK)
     const consumer = await Consumer.findOne({ where: { userId } });
     if (!consumer) {
       return res.status(404).json({ message: 'Consumer not found' });
+    }
+
+    // Check if profilePic is being updated and is different from the previous one
+    let delImage = false;
+    if (profilePic && consumer.profilePic !== profilePic) {
+      delImage = consumer.profilePic;
     }
 
     // Update fields if provided
@@ -109,6 +116,7 @@ exports.updateConsumer = async (req, res) => {
 
     // Save the updated consumer
     await consumer.save();
+    delImage ? await deleteFileInR2(delImage) : null;
 
     res.status(200).json({ message: 'Consumer updated successfully', consumer });
   } catch (error) {

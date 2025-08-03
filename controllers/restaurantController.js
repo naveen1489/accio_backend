@@ -6,6 +6,8 @@ const { User } = require('../models'); // Import the User model
 const crypto = require('crypto'); // For generating random password
 const bcrypt = require('bcryptjs'); // Import bcrypt for password hashing
 const { Op } = require('sequelize');
+const { deleteFileInR2 } = require("../services/r2");
+
 
 const mealPlanConfig = {
   '1 Week': 7,
@@ -278,6 +280,12 @@ exports.updateRestaurant = async (req, res) => {
         const restaurant = await Restaurant.findByPk(id);
         if (!restaurant) return res.status(404).json({ message: 'Restaurant not found' });
 
+        // Check if imageUrl is being updated and is different from the previous one
+        let delImage = false;
+        if (imageUrl && restaurant.imageUrl !== imageUrl) {
+            delImage = restaurant.imageUrl;
+        }
+
         // Update fields if provided
         restaurant.companyName = companyName || restaurant.companyName;
         restaurant.nameTitle = nameTitle || restaurant.nameTitle;
@@ -294,9 +302,10 @@ exports.updateRestaurant = async (req, res) => {
         restaurant.country = country || restaurant.country;
         restaurant.latitude = latitude || restaurant.latitude;
         restaurant.longitude = longitude || restaurant.longitude;
-        restaurant.imageUrl = imageUrl || restaurant.imageUrl; 
+        restaurant.imageUrl = imageUrl || restaurant.imageUrl;
 
         await restaurant.save();
+        delImage ? await deleteFileInR2(delImage) : null;
 
         // Fetch the updated restaurant object
         const updatedRestaurant = await Restaurant.findByPk(id);
