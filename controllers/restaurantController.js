@@ -196,7 +196,22 @@ const addRestoEmailTemplate = (name, companyName, username, password) => {
 // Get All Restaurant Partners
 exports.getAllRestaurants = async (req, res) => {
     try {
-        const restaurants = await Restaurant.findAll();
+        const restaurants = await Restaurant.findAll({
+            attributes: {
+                include: [
+                    [
+                        sequelize.literal(`(
+                            SELECT COUNT(DISTINCT "consumerId")
+                            FROM "Subscriptions"
+                            WHERE
+                                "Subscriptions"."restaurantId" = "Restaurant"."id" AND
+                                "Subscriptions"."status" = 'approved'
+                        )`),
+                        'activeSubscribersCount'
+                    ]
+                ]
+            }
+        });
         res.status(200).json(restaurants);
     } catch (error) {
         console.error('Error fetching restaurants:', error);
