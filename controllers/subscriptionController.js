@@ -102,16 +102,7 @@ exports.createSubscription = async (req, res) => {
     const paymentAmount = calculatePaymentAmount(numberOfOrders, adjustedMenuPrice);
     
     // Extract close dates from closeDays array
-    let closeStartDate = null;
-    let closeEndDate = null;
-    if (restaurant?.closeDays && Array.isArray(restaurant.closeDays) && restaurant.closeDays.length > 0) {
-      const sortedDates = restaurant.closeDays.sort();
-      closeStartDate = sortedDates[0];
-      closeEndDate = sortedDates[sortedDates.length - 1];
-    }
-    
-    const adjustedEndDate = adjustSubscriptionEndDate(startDate, endDate, closeStartDate, closeEndDate);
-
+    const adjustedEndDate = adjustSubscriptionEndDate(startDate, endDate, restaurant.closeDays, mealFrequency);
     // Create the subscription
     const subscription = await Subscription.create({
       consumerId,
@@ -144,35 +135,30 @@ exports.createSubscription = async (req, res) => {
     res.status(500).json({ message: 'Internal server error', error });
   }
 };
-const adjustSubscriptionEndDate = (startDate, endDate, closeStartDate, closeEndDate) => {
-  // Convert dates to Date objects
+const adjustSubscriptionEndDate = (startDate, endDate, closeDays, mealFrequency) => {
   const subscriptionStart = new Date(startDate);
-  const subscriptionEnd = new Date(endDate);
-  
-  // Check if close dates are provided
-  if (!closeStartDate || !closeEndDate) {
-    return subscriptionEnd; // Return original end date if no close dates
-  }
-  
-  const closeStart = new Date(closeStartDate);
-  const closeEnd = new Date(closeEndDate);
+  let subscriptionEnd = new Date(endDate);
 
-  // Check if the restaurant's close days overlap with the subscription period
-  if (
-    (closeStart >= subscriptionStart && closeStart <= subscriptionEnd) ||
-    (closeEnd >= subscriptionStart && closeEnd <= subscriptionEnd)
-  ) {
-    const overlapStart = Math.max(closeStart.getTime(), subscriptionStart.getTime());
-    const overlapEnd = Math.min(closeEnd.getTime(), subscriptionEnd.getTime());
-
-    // Calculate the number of overlapping close days
-    const closeDaysCount = Math.ceil((overlapEnd - overlapStart) / (1000 * 60 * 60 * 24)) + 1;
-
-    // Extend the subscription end date by the number of close days
-    return new Date(subscriptionEnd.getTime() + closeDaysCount * 24 * 60 * 60 * 1000);
+  // Get allowed delivery days for the meal frequency
+  const allowedDays = mealFrequencyConfig[mealFrequency];
+  if (!allowedDays) {
+    return subscriptionEnd; // Or throw an error if you want strict validation
   }
 
-  // Return the original end date if no overlap
+  if (closeDays && Array.isArray(closeDays)) {
+    // Only consider close days that are within the subscription period and on allowed delivery days
+    const overlappingCloseDays = closeDays.filter(closeDay => {
+      const closeDate = new Date(closeDay);
+      const isWithinRange = closeDate >= subscriptionStart && closeDate <= subscriptionEnd;
+      const isAllowedDay = allowedDays.includes(closeDate.getDay());
+      return isWithinRange && isAllowedDay;
+    });
+
+    if (overlappingCloseDays.length > 0) {
+      subscriptionEnd.setDate(subscriptionEnd.getDate() + overlappingCloseDays.length);
+    }
+  }
+
   return subscriptionEnd;
 };
 
