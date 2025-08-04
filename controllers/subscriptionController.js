@@ -535,6 +535,21 @@ exports.pauseSubscription = async (req, res) => {
     // Step 9: Create new orders for the extended days
     await createOrdersForExtendedDays(subscription, pausedDaysCount);
 
+    // Notify the restaurant about the pause
+    // Fetch consumer and restaurant for notification
+    const consumer = await Consumer.findByPk(subscription.consumerId);
+    const restaurant = await Restaurant.findByPk(subscription.restaurantId);
+    if (consumer && restaurant) {
+      await Notification.create({
+        ReceiverId: restaurant.userId,
+        SenderId: consumer.userId,
+        NotificationMessage: `Subscription for "${consumer.name}" has been paused for selected dates.`,
+        NotificationType: 'Subscription Paused',
+        NotificationMetadata: { subscriptionId: subscription.id, pausedDates: pausedDeliveryDays },
+      });
+    }
+
+
     // Step 10: Respond with updated subscription
     res.status(200).json({
       message: 'Subscription end date updated successfully based on paused dates',
