@@ -335,46 +335,44 @@ exports.updateSubscriptionStatus = async (req, res) => {
     subscription.status = status;
     await subscription.save();
 
-    // If the status is approved, generate orders
+   // If the status is approved, generate orders
     if (status === 'approved') {
       const { startDate, endDate, mealFrequency, restaurantId, menuId, addressId } = subscription;
-      const userId = subscription.consumerId; // Retrieve userId from the associated Consumer
+      const userId = subscription.consumerId;
+
+      // Fetch restaurant to get closeDays
+      const restaurant = await Restaurant.findByPk(restaurantId);
+      const closeDays = Array.isArray(restaurant?.closeDays) ? restaurant.closeDays.map(d => (new Date(d)).setHours(0,0,0,0)) : [];
 
       const orders = [];
       const currentDate = new Date(startDate);
-
-      // Determine allowed days based on mealFrequency
       const allowedDays = mealFrequencyConfig[mealFrequency];
       if (!allowedDays) {
         return res.status(400).json({ message: `Invalid meal frequency: ${mealFrequency}` });
       }
 
       while (currentDate <= new Date(endDate)) {
-        const dayOfWeek = currentDate.getDay(); // Get the day of the week (0 = Sunday, 1 = Monday, ..., 6 = Saturday)
+        const dayOfWeek = currentDate.getDay();
+        const normalizedDate = new Date(currentDate);
+        normalizedDate.setHours(0, 0, 0, 0);
 
-        // Create orders only for allowed days
-        if (allowedDays.includes(dayOfWeek)) {
-          const orderNumber = Math.floor(1000000000000000 + Math.random() * 9000000000000000).toString(); // Generate random 16-digit number
-          // Normalize the date to only include the date component
-      const normalizedDate = new Date(currentDate);
-      normalizedDate.setHours(0, 0, 0, 0); // Set time to 00:00:00
+        // Skip if not allowed day or if it's a close day
+        if (allowedDays.includes(dayOfWeek) && !closeDays.includes(normalizedDate.getTime())) {
+          const orderNumber = Math.floor(1000000000000000 + Math.random() * 9000000000000000).toString();
           orders.push({
             subscriptionId: subscription.id,
-            userId, // Set the userId correctly
+            userId,
             restaurantId,
             menuId,
             addressId,
-            orderDate: normalizedDate, // Use the current date in the iteration
-            status: 'pending', // Default order status
-            orderNumber, // Add the generated order number
+            orderDate: normalizedDate,
+            status: 'pending',
+            orderNumber,
           });
         }
-
-        // Increment the date by 1 day
         currentDate.setDate(currentDate.getDate() + 1);
       }
 
-      // Bulk create orders
       await Order.bulkCreate(orders);
     }
 
