@@ -501,6 +501,22 @@ const totalRevenueWeek = await Subscription.sum('paymentAmount', {
       status: 'pending', // Default status
     });
 
+    
+    // --- Send notification to restaurant ---
+    const restaurant = await Restaurant.findByPk(restaurantId);
+    if (restaurant) {
+      const Notification = require('../models').Notification;
+      await Notification.create({
+        ReceiverId: restaurant.userId,
+        SenderId: userId,
+        NotificationMessage: `A new complaint has been submitted for order #${orderId}: "${complaintMessage}"`,
+        NotificationType: 'Order Complaint',
+        NotificationMetadata: { complaintId: complaint.id, orderId },
+      });
+    }
+    // ---------------------------------------
+
+
     res.status(201).json({ message: 'Complaint created successfully', complaint });
   } catch (error) {
     console.error('Error creating complaint:', error);
@@ -537,6 +553,19 @@ exports.updateComplaintStatus = async (req, res) => {
     complaint.status = 'resolved';
     complaint.comment = comment;
     await complaint.save();
+       // --- Send notification to consumer ---
+    const consumer = await Consumer.findByPk(complaint.consumerId);
+    if (consumer) {
+      const Notification = require('../models').Notification;
+      await Notification.create({
+        ReceiverId: consumer.userId,
+        SenderId: restaurant.userId,
+        NotificationMessage: `Your complaint for order #${complaint.orderId} has been resolved: "${comment}"`,
+        NotificationType: 'Complaint Resolved',
+        NotificationMetadata: { complaintId: complaint.id, orderId: complaint.orderId },
+      });
+    }
+    // -------------------------------------
 
     res.status(200).json({ message: 'Complaint status updated successfully', complaint });
   } catch (error) {
