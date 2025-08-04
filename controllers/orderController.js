@@ -17,7 +17,7 @@ exports.getOrders = async (req, res) => {
     const restaurantId = restaurant.id;
 
     // Extract filters from query parameters
-    const { categoryName, startDate, endDate, status, orderId } = req.query;
+    const { categoryName, startDate, endDate, status, orderId, page = 1, limit = 10 } = req.query;
 
     // Build the filter conditions
     const filters = { restaurantId }; // Filter by restaurantId
@@ -44,20 +44,31 @@ exports.getOrders = async (req, res) => {
       };
     }
 
+    // Pagination
+    const offset = (parseInt(page, 10) - 1) * parseInt(limit, 10);
+
+    // Build include for Subscription with categoryName filter
+    const subscriptionInclude = {
+      model: Subscription,
+      as: 'subscription',
+      attributes: ['id', 'mealPlan', 'mealFrequency', 'categoryName'], // Include subscription details
+    };
+    if (categoryName) {
+      subscriptionInclude.where = { categoryName };
+      subscriptionInclude.required = true; // Ensure it's an INNER JOIN if filtering
+    }
+
     // Query the orders with filters and include related details
-    const orders = await Order.findAll({
+    const { count, rows: orders } = await Order.findAndCountAll({
       where: filters,
+      limit: parseInt(limit, 10),
+      offset,
+      order: [['orderDate', 'DESC']],
       include: [
         {
           model: Menu,
           as: 'menu',
           attributes: ['id', 'menuName', 'price'], // Include menu details
-          where: categoryName ? { categoryName } : {}, // Filter by category if provided
-        },
-        {
-          model: Subscription,
-          as: 'subscription',
-          attributes: ['id', 'mealPlan', 'mealFrequency'], // Include subscription details
         },
         {
           model: DeliveryPartner,
@@ -78,10 +89,18 @@ exports.getOrders = async (req, res) => {
           model: Address,
           as: 'address', // Include address details
         },
+        subscriptionInclude,
       ],
+      distinct: true, // Necessary for correct counts with includes
     });
 
-    res.status(200).json({ message: 'Orders fetched successfully', orders });
+    res.status(200).json({
+      message: 'Orders fetched successfully',
+      totalOrders: count,
+      totalPages: Math.ceil(count / parseInt(limit, 10)),
+      currentPage: parseInt(page, 10),
+      orders,
+    });
   } catch (error) {
     console.error('Error fetching orders:', error);
     res.status(500).json({ message: 'Internal server error', error });
@@ -132,20 +151,26 @@ exports.getOrdersForDeliveryPartner = async (req, res) => {
     }
     const deliveryPartnerId = deliveryPartner.id;
      
+    // Extract pagination parameters
+    const { page = 1, limit = 10 } = req.query;
+    const offset = (parseInt(page, 10) - 1) * parseInt(limit, 10);
 
     // Query the orders with filters and include related details
-    const orders = await Order.findAll({
+    const { count, rows: orders } = await Order.findAndCountAll({
       where: { deliveryPartnerId },
+      limit: parseInt(limit, 10),
+      offset,
+      order: [['orderDate', 'DESC']],
       include: [
         {
           model: Menu,
           as: 'menu',
           attributes: ['id', 'menuName', 'price'], // Include menu details
-      include: [
+          include: [
             {
               model: MenuCategory,
               as: 'menuCategories',
-              attributes: ['categoryName'],
+              attributes: ['id', 'categoryName'], // Include menu category
             },
           ],
         },
@@ -176,7 +201,13 @@ exports.getOrdersForDeliveryPartner = async (req, res) => {
       ],
     });
 
-    res.status(200).json({ message: 'Orders fetched successfully', orders });
+    res.status(200).json({
+      message: 'Orders fetched successfully',
+      totalOrders: count,
+      totalPages: Math.ceil(count / parseInt(limit, 10)),
+      currentPage: parseInt(page, 10),
+      orders,
+    });
   } catch (error) {
     console.error('Error fetching orders for delivery partner:', error);
     res.status(500).json({ message: 'Internal server error', error });

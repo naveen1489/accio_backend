@@ -101,7 +101,16 @@ exports.createSubscription = async (req, res) => {
     // Calculate the payment amount
     const paymentAmount = calculatePaymentAmount(numberOfOrders, adjustedMenuPrice);
     
-    const adjustedEndDate = adjustSubscriptionEndDate(startDate, endDate, restaurant.closeStartDate, restaurant.closeEndDate);
+    // Extract close dates from closeDays array
+    let closeStartDate = null;
+    let closeEndDate = null;
+    if (restaurant?.closeDays && Array.isArray(restaurant.closeDays) && restaurant.closeDays.length > 0) {
+      const sortedDates = restaurant.closeDays.sort();
+      closeStartDate = sortedDates[0];
+      closeEndDate = sortedDates[sortedDates.length - 1];
+    }
+    
+    const adjustedEndDate = adjustSubscriptionEndDate(startDate, endDate, closeStartDate, closeEndDate);
 
     // Create the subscription
     const subscription = await Subscription.create({
@@ -139,6 +148,12 @@ const adjustSubscriptionEndDate = (startDate, endDate, closeStartDate, closeEndD
   // Convert dates to Date objects
   const subscriptionStart = new Date(startDate);
   const subscriptionEnd = new Date(endDate);
+  
+  // Check if close dates are provided
+  if (!closeStartDate || !closeEndDate) {
+    return subscriptionEnd; // Return original end date if no close dates
+  }
+  
   const closeStart = new Date(closeStartDate);
   const closeEnd = new Date(closeEndDate);
 
@@ -453,8 +468,17 @@ function filterPausedDeliveryDays(validDates, allowedDays) {
  */
 async function getRestaurantCloseDates(restaurantId) {
   const restaurant = await Restaurant.findByPk(restaurantId);
-  let closeStart = restaurant?.closeStartDate ? new Date(restaurant.closeStartDate) : null;
-  let closeEnd = restaurant?.closeEndDate ? new Date(restaurant.closeEndDate) : null;
+  let closeStart = null;
+  let closeEnd = null;
+  
+  // Check if restaurant has closeDays array
+  if (restaurant?.closeDays && Array.isArray(restaurant.closeDays) && restaurant.closeDays.length > 0) {
+    // Sort the dates to get start and end
+    const sortedDates = restaurant.closeDays.sort();
+    closeStart = new Date(sortedDates[0]);
+    closeEnd = new Date(sortedDates[sortedDates.length - 1]);
+  }
+  
   return { closeStart, closeEnd };
 }
 
