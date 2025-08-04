@@ -412,15 +412,17 @@ exports.getOrderAndRevenueStats = async (req, res) => {
     });
 
     // Fetch total revenue for the week so far
-    const totalRevenueWeek = await Subscription.sum('paymentAmount', {
-      where: {
-        paymentStatus: 'paid',
-        restaurantId,
-        updatedAt: {
-          [Op.between]: [startOfWeek, today],
-        },
-      },
-    });
+const now = new Date();
+
+const totalRevenueWeek = await Subscription.sum('paymentAmount', {
+  where: {
+    paymentStatus: 'paid',
+    restaurantId,
+    updatedAt: {
+      [Op.between]: [startOfWeek, now],
+    },
+  },
+});
 
     // Fetch total revenue for the month
     const totalRevenueMonth = await Subscription.sum('paymentAmount', {
