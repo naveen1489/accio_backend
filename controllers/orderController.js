@@ -234,6 +234,36 @@ exports.getOrdersForDeliveryPartner = async (req, res) => {
       // Update the order status
       order.status = status;
       await order.save();
+
+       // --- Send notifications if status is completed ---
+    if (status === 'completed') {
+      const restaurant = await Restaurant.findByPk(order.restaurantId);
+      const consumer = await Consumer.findByPk(order.consumerId);
+      const Notification = require('../models').Notification;
+
+      // Notify restaurant
+      if (restaurant) {
+        await Notification.create({
+          ReceiverId: restaurant.userId,
+          SenderId: req.user.id,
+          NotificationMessage: `Delivery for order #${order.id} has been completed.`,
+          NotificationType: 'Delivery Completed',
+          NotificationMetadata: { orderId: order.id },
+        });
+      }
+      // Notify consumer
+      if (consumer) {
+        await Notification.create({
+          ReceiverId: consumer.userId,
+          SenderId: req.user.id,
+          NotificationMessage: `Your order #${order.id} has been delivered.`,
+          NotificationType: 'Delivery Completed',
+          NotificationMetadata: { orderId: order.id },
+        });
+      }
+    }
+    // -------------------------------------------------
+
   
       res.status(200).json({ message: 'Order status updated successfully', order });
     } catch (error) {
