@@ -203,7 +203,42 @@ exports.completeDelivery = async (req, res) => {
     // Update the delivery status and record completion time
     delivery.status = 'Completed';
     delivery.completedAt = new Date();
-    await delivery.save();
+    await delivery.save();// --- Send notifications to restaurant and consumer ---
+    // Fetch related order, subscription, restaurant, and consumer
+    const order = await models.Order.findOne({ where: { deliveryId: delivery.id } });
+    let restaurant = null;
+    let consumer = null;
+    if (order) {
+      const subscription = await models.Subscription.findByPk(order.subscriptionId);
+      if (subscription) {
+        restaurant = await models.Restaurant.findByPk(subscription.restaurantId);
+        consumer = await models.Consumer.findByPk(subscription.consumerId);
+      }
+    }
+    // Send notification to restaurant
+    if (restaurant && order) {
+      await models.Notification.create({
+        ReceiverId: restaurant.userId,
+        SenderId: req.user.id,
+        NotificationMessage: `Delivery for order #${order.id} has been completed.`,
+        NotificationType: 'Delivery Completed',
+        NotificationMetadata: { deliveryId: delivery.id, orderId: order.id },
+      });
+    }
+    // Send notification to consumer
+    if (consumer && order) {
+      await models.Notification.create({
+        ReceiverId: consumer.userId,
+        SenderId: req.user.id,
+        NotificationMessage: `Your order #${order.id} has been delivered.`,
+        NotificationType: 'Delivery Completed',
+        NotificationMetadata: { deliveryId: delivery.id, orderId: order.id },
+      });
+    }
+    // ----------------------------------------------------
+
+
+
 
     res.status(200).json({ message: 'Delivery marked as completed', delivery });
   } catch (error) {

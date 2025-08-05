@@ -353,4 +353,6 @@ router.get('/complaints/restaurant', authMiddleware, orderController.getComplain
  *         description: Internal server error
  */
 router.get('/complaints/consumer', authMiddleware, orderController.getComplaintsByConsumer);
+
+router.get('/complaints/:complaintId', authMiddleware, orderController.getComplaintByComplaintId);
 module.exports = router;

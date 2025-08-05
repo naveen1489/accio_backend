@@ -234,6 +234,36 @@ exports.getOrdersForDeliveryPartner = async (req, res) => {
       // Update the order status
       order.status = status;
       await order.save();
+
+       // --- Send notifications if status is completed ---
+    if (status === 'completed') {
+      const restaurant = await Restaurant.findByPk(order.restaurantId);
+      const consumer = await Consumer.findByPk(order.consumerId);
+      const Notification = require('../models').Notification;
+
+      // Notify restaurant
+      if (restaurant) {
+        await Notification.create({
+          ReceiverId: restaurant.userId,
+          SenderId: req.user.id,
+          NotificationMessage: `Delivery for order #${order.id} has been completed.`,
+          NotificationType: 'Delivery Completed',
+          NotificationMetadata: { orderId: order.id },
+        });
+      }
+      // Notify consumer
+      if (consumer) {
+        await Notification.create({
+          ReceiverId: consumer.userId,
+          SenderId: req.user.id,
+          NotificationMessage: `Your order #${order.id} has been delivered.`,
+          NotificationType: 'Delivery Completed',
+          NotificationMetadata: { orderId: order.id },
+        });
+      }
+    }
+    // -------------------------------------------------
+
   
       res.status(200).json({ message: 'Order status updated successfully', order });
     } catch (error) {
@@ -242,7 +272,7 @@ exports.getOrdersForDeliveryPartner = async (req, res) => {
     }
   };
 
-  exports.getOrderAndRevenueStats = async (req, res) => {
+  exports.getOrderAndRevenueStatsOld = async (req, res) => {
     try {
       const userId = req.user.id; // Extract userId from JWT token
   
@@ -333,6 +363,145 @@ exports.getOrdersForDeliveryPartner = async (req, res) => {
     }
   };
 
+
+exports.getOrderAndRevenueStats = async (req, res) => {
+  try {
+    const userId = req.user.id; // Extract userId from JWT token
+
+    // Fetch the restaurantId for the user
+    const restaurant = await Restaurant.findOne({ where: { userId } });
+    if (!restaurant) {
+      return res.status(404).json({ message: 'Restaurant not found for the user' });
+    }
+
+    const restaurantId = restaurant.id;
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0); // Start of today
+
+    // Calculate the start of the week (Monday)
+    const dayOfWeek = today.getDay(); // 0 = Sunday, 1 = Monday, ..., 6 = Saturday
+    const daysSinceMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1; // Adjust for Sunday
+    const startOfWeek = new Date(today);
+    startOfWeek.setDate(today.getDate() - daysSinceMonday);
+    startOfWeek.setHours(0, 0, 0, 0);
+
+    // Calculate the start of the month
+    const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+
+    // Fetch total completed orders for today
+    const totalOrdersToday = await Order.count({
+      where: {
+        status: 'completed',
+        restaurantId,
+        orderDate: {
+          [Op.gte]: today,
+        },
+      },
+    });
+
+    // Fetch total completed orders for the week so far
+    const totalOrdersWeek = await Order.count({
+      where: {
+        status: 'completed',
+        restaurantId,
+        orderDate: {
+          [Op.between]: [startOfWeek, today],
+        },
+      },
+    });
+
+    // Fetch total completed orders for the month
+    const totalOrdersMonth = await Order.count({
+      where: {
+        status: 'completed',
+        restaurantId,
+        orderDate: {
+          [Op.gte]: startOfMonth,
+        },
+      },
+    });
+
+    // Fetch total completed orders for all time
+    const totalOrdersAll = await Order.count({
+      where: {
+        status: 'completed',
+        restaurantId,
+      },
+    });
+
+    // Fetch total revenue for today
+    const totalRevenueToday = await Subscription.sum('paymentAmount', {
+      where: {
+        paymentStatus: 'paid',
+        restaurantId,
+        updatedAt: {
+          [Op.gte]: today,
+        },
+      },
+    });
+
+    // Fetch total revenue for the week so far
+const now = new Date();
+
+const totalRevenueWeek = await Subscription.sum('paymentAmount', {
+  where: {
+    paymentStatus: 'paid',
+    restaurantId,
+    updatedAt: {
+      [Op.between]: [startOfWeek, now],
+    },
+  },
+});
+
+    // Fetch total revenue for the month
+    const totalRevenueMonth = await Subscription.sum('paymentAmount', {
+      where: {
+        paymentStatus: 'paid',
+        restaurantId,
+        updatedAt: {
+          [Op.gte]: startOfMonth,
+        },
+      },
+    });
+
+    // Fetch total revenue for all time
+    const totalRevenueAll = await Subscription.sum('paymentAmount', {
+      where: {
+        paymentStatus: 'paid',
+        restaurantId,
+      },
+    });
+
+    // Fetch total pending payments for approved subscriptions
+    const totalPendingPayments = await Subscription.sum('paymentAmount', {
+      where: {
+        paymentStatus: 'pending',
+        status: 'approved',
+        restaurantId,
+      },
+    });
+
+    res.status(200).json({
+      message: 'Order and revenue stats fetched successfully',
+      stats: {
+        totalOrdersToday,
+        totalOrdersWeek,
+        totalOrdersMonth,
+        totalOrdersAll,
+        totalRevenueToday: totalRevenueToday || 0,
+        totalRevenueWeek: totalRevenueWeek || 0,
+        totalRevenueMonth: totalRevenueMonth || 0,
+        totalRevenueAll: totalRevenueAll || 0,
+        totalPendingPayments: totalPendingPayments || 0,
+      },
+    });
+  } catch (error) {
+    console.error('Error fetching order and revenue stats:', error);
+    res.status(500).json({ message: 'Internal server error', error });
+  }
+};
+
  exports.createComplaint = async (req, res) => {
   try {
     const userId = req.user.id; // Extract userId from JWT
@@ -361,6 +530,22 @@ exports.getOrdersForDeliveryPartner = async (req, res) => {
       imageUrls, // Add image URLs
       status: 'pending', // Default status
     });
+
+    
+    // --- Send notification to restaurant ---
+    const restaurant = await Restaurant.findByPk(restaurantId);
+    if (restaurant) {
+      const Notification = require('../models').Notification;
+      await Notification.create({
+        ReceiverId: restaurant.userId,
+        SenderId: userId,
+        NotificationMessage: `A new complaint has been submitted for order #${orderId}: "${complaintMessage}"`,
+        NotificationType: 'Order Complaint',
+        NotificationMetadata: { complaintId: complaint.id, orderId },
+      });
+    }
+    // ---------------------------------------
+
 
     res.status(201).json({ message: 'Complaint created successfully', complaint });
   } catch (error) {
@@ -398,6 +583,19 @@ exports.updateComplaintStatus = async (req, res) => {
     complaint.status = 'resolved';
     complaint.comment = comment;
     await complaint.save();
+       // --- Send notification to consumer ---
+    const consumer = await Consumer.findByPk(complaint.consumerId);
+    if (consumer) {
+      const Notification = require('../models').Notification;
+      await Notification.create({
+        ReceiverId: consumer.userId,
+        SenderId: restaurant.userId,
+        NotificationMessage: `Your complaint for order #${complaint.orderId} has been resolved: "${comment}"`,
+        NotificationType: 'Complaint Resolved',
+        NotificationMetadata: { complaintId: complaint.id, orderId: complaint.orderId },
+      });
+    }
+    // -------------------------------------
 
     res.status(200).json({ message: 'Complaint status updated successfully', complaint });
   } catch (error) {
@@ -546,3 +744,64 @@ exports.getComplaintsByConsumer = async (req, res) => {
     res.status(500).json({ message: 'Internal server error', error });
   }
 };
+
+
+// ...existing code...
+
+/**
+ * Get a complaint by complaintId for restaurant or consumer.
+ * Accessible by both restaurant and consumer (based on JWT user).
+ */
+exports.getComplaintByComplaintId = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { complaintId } = req.params;
+
+    // Find the complaint
+    const complaint = await Complaint.findByPk(complaintId, {
+      include: [
+        {
+          model: Order,
+          as: 'order',
+          attributes: ['id', 'orderNumber'],
+        },
+        {
+          model: Consumer,
+          as: 'consumer',
+          attributes: ['id', 'name', 'mobile', 'userId'],
+        },
+        {
+          model: Menu,
+          as: 'menu',
+          attributes: ['id', 'menuName'],
+        },
+        {
+          model: Restaurant,
+          as: 'restaurant',
+          attributes: ['id', 'name', 'companyName', 'userId'],
+        },
+      ],
+    });
+
+    if (!complaint) {
+      return res.status(404).json({ message: 'Complaint not found' });
+    }
+
+    // Check if the user is the restaurant owner or the consumer
+    const isConsumer = complaint.consumer && complaint.consumer.userId === userId;
+    const isRestaurant = complaint.restaurant && complaint.restaurant.userId === userId;
+
+    if (!isConsumer && !isRestaurant) {
+      return res.status(403).json({ message: 'Not authorized to view this complaint' });
+    }
+
+    res.status(200).json({
+      message: 'Complaint fetched successfully',
+      complaint,
+    });
+  } catch (error) {
+    console.error('Error fetching complaint by complaintId:', error);
+    res.status(500).json({ message: 'Internal server error', error });
+  }
+};
+// ...existing code...

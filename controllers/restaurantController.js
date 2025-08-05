@@ -503,6 +503,34 @@ exports.updateCloseDates = async (req, res) => {
 
       // Create new orders for extended days
       await createOrdersForExtendedDaysForSpecificDates(restaurantId, closeDays);
+   
+   // --- Send notifications to all consumers in subscriptions ---
+      const subscriptions = await Subscription.findAll({ where: { restaurantId } });
+      const { Notification, Consumer } = require('../models');
+    // ...existing code...
+      for (const subscription of subscriptions) {
+        const consumer = await Consumer.findByPk(subscription.consumerId);
+        if (consumer) {
+          // Format close days as YYYY-MM-DD and limit to 3 dates for the message
+          const formattedDates = closeDays.map(d => new Date(d).toISOString().split('T')[0]);
+          let messageDates = formattedDates.slice(0, 3).join(', ');
+          if (formattedDates.length > 3) {
+            messageDates += ` and ${formattedDates.length - 3} more`;
+          }
+          const notificationMsg = `The restaurant "${restaurant.companyName}" will be closed on: ${messageDates}. Your subscription end date has been extended.`;
+
+          await Notification.create({
+            ReceiverId: consumer.userId,
+            SenderId: restaurant.userId,
+            NotificationMessage: notificationMsg,
+            NotificationType: 'Restaurant Close Days',
+            NotificationMetadata: { subscriptionId: subscription.id, closeDays: formattedDates },
+          });
+        }
+      }
+// ...existing code...
+      // -----------------------------------------------------------
+ 
     }
    
     // Update closeDays field with the array of dates
