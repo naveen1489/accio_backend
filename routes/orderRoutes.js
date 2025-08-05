@@ -197,7 +197,7 @@ router.get('/delivery-partner',authMiddleware,  orderController.getOrdersForDeli
  *       500:
  *         description: Internal server error
  */
-router.patch('/:orderId/status', orderController.updateOrderStatusByDeliveryPartner);
+router.patch('/:orderId/status', authMiddleware, orderController.updateOrderStatusByDeliveryPartner);
 
 
 

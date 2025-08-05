@@ -237,12 +237,14 @@ exports.getOrdersForDeliveryPartner = async (req, res) => {
 
        // --- Send notifications if status is completed ---
     if (status === 'completed') {
+      console.log('Order completed:', orderId);
       const restaurant = await Restaurant.findByPk(order.restaurantId);
       const consumer = await Consumer.findByPk(order.consumerId);
       const Notification = require('../models').Notification;
 
       // Notify restaurant
       if (restaurant) {
+        console.log('Notifying restaurant:', restaurant.userId);
         await Notification.create({
           ReceiverId: restaurant.userId,
           SenderId: req.user.id,
@@ -253,6 +255,7 @@ exports.getOrdersForDeliveryPartner = async (req, res) => {
       }
       // Notify consumer
       if (consumer) {
+        console.log('Notifying consumer:', consumer.userId);
         await Notification.create({
           ReceiverId: consumer.userId,
           SenderId: req.user.id,
