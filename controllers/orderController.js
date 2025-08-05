@@ -738,7 +738,7 @@ exports.getComplaintByComplaintId = async (req, res) => {
         {
           model: Consumer,
           as: 'consumer',
-          attributes: ['id', 'name', 'mobile'],
+          attributes: ['id', 'name', 'mobile', 'userId'],
         },
         {
           model: Menu,
