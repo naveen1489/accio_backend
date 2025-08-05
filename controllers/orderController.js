@@ -714,3 +714,64 @@ exports.getComplaintsByConsumer = async (req, res) => {
     res.status(500).json({ message: 'Internal server error', error });
   }
 };
+
+
+// ...existing code...
+
+/**
+ * Get a complaint by complaintId for restaurant or consumer.
+ * Accessible by both restaurant and consumer (based on JWT user).
+ */
+exports.getComplaintByComplaintId = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { complaintId } = req.params;
+
+    // Find the complaint
+    const complaint = await Complaint.findByPk(complaintId, {
+      include: [
+        {
+          model: Order,
+          as: 'order',
+          attributes: ['id', 'orderNumber'],
+        },
+        {
+          model: Consumer,
+          as: 'consumer',
+          attributes: ['id', 'name', 'mobile'],
+        },
+        {
+          model: Menu,
+          as: 'menu',
+          attributes: ['id', 'menuName'],
+        },
+        {
+          model: Restaurant,
+          as: 'restaurant',
+          attributes: ['id', 'name', 'companyName', 'userId'],
+        },
+      ],
+    });
+
+    if (!complaint) {
+      return res.status(404).json({ message: 'Complaint not found' });
+    }
+
+    // Check if the user is the restaurant owner or the consumer
+    const isConsumer = complaint.consumer && complaint.consumer.userId === userId;
+    const isRestaurant = complaint.restaurant && complaint.restaurant.userId === userId;
+
+    if (!isConsumer && !isRestaurant) {
+      return res.status(403).json({ message: 'Not authorized to view this complaint' });
+    }
+
+    res.status(200).json({
+      message: 'Complaint fetched successfully',
+      complaint,
+    });
+  } catch (error) {
+    console.error('Error fetching complaint by complaintId:', error);
+    res.status(500).json({ message: 'Internal server error', error });
+  }
+};
+// ...existing code...
