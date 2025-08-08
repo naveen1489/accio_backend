@@ -620,18 +620,7 @@ exports.pauseSubscription = async (req, res) => {
     subscription.pausedDates = newPausedDeliveryDays;
     await subscription.save();
 
-    // Cancel orders that are now outside the new end date
-    await Order.update(
-      { status: 'cancelled' },
-      {
-        where: {
-          subscriptionId: subscription.id,
-          orderDate: { [Op.gt]: newEndDate },
-          status: { [Op.not]: 'cancelled' }
-        }
-      }
-    );
-
+  
 
     // Step 10: Create new orders for the extended days (if any)
     if (addedDeliveryDays.length > 0) {
