@@ -598,7 +598,8 @@ exports.pauseSubscription = async (req, res) => {
     // Step 8: Restore orders for unpaused days
     await restoreOrdersForUnpausedDays(subscription.id, removedPausedDays.map(d => new Date(d)));
 
-  // Step 9: Adjust end date
+
+    // Step 9: Adjust end date
     // Only extend for newly paused delivery days, and reduce for unpaused delivery days
     const addedDeliveryDays = addedPausedDays
       .map(d => new Date(d))
@@ -607,14 +608,18 @@ exports.pauseSubscription = async (req, res) => {
       .map(d => new Date(d))
       .filter(date => allowedDays.includes(date.getDay()));
 
-    let newEndDate = new Date(subscription.endDate);
-    newEndDate.setDate(
-      newEndDate.getDate() + addedDeliveryDays.length - removedDeliveryDays.length
-    );
+    let newEndDate = subscription.endDate;
+    if (addedDeliveryDays.length > 0) {
+      newEndDate = adjustEndDateByDeliveryDays(newEndDate, addedDeliveryDays.length, allowedDays, +1);
+    }
+    if (removedDeliveryDays.length > 0) {
+      newEndDate = adjustEndDateByDeliveryDays(newEndDate, removedDeliveryDays.length, allowedDays, -1);
+    }
 
     subscription.endDate = newEndDate;
     subscription.pausedDates = newPausedDeliveryDays;
     await subscription.save();
+
 
     // Step 10: Create new orders for the extended days (if any)
     if (addedDeliveryDays.length > 0) {
@@ -643,6 +648,23 @@ exports.pauseSubscription = async (req, res) => {
     res.status(500).json({ message: 'Internal server error', error });
   }
 };
+
+
+/**
+ * Helper to move the end date forward/backward by N valid delivery days (skipping off days).
+ * direction: +1 for extending, -1 for reducing
+ */
+function adjustEndDateByDeliveryDays(originalEndDate, deliveryDaysCount, allowedDays, direction = 1) {
+  let newEndDate = new Date(originalEndDate);
+  let changed = 0;
+  while (changed < Math.abs(deliveryDaysCount)) {
+    newEndDate.setDate(newEndDate.getDate() + direction);
+    if (allowedDays.includes(newEndDate.getDay())) {
+      changed++;
+    }
+  }
+  return newEndDate;
+}
 
 // Helper to restore orders for unpaused days
 const restoreOrdersForUnpausedDays = async (subscriptionId, unpausedDays) => {
