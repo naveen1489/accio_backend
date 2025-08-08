@@ -489,7 +489,7 @@ function calculateExtendedEndDate(originalEndDate, daysToAdd, allowedDays, close
  * PATCH /subscriptions/:id/pause
  * Pauses a subscription for specific dates, extends the end date, and updates orders.
  */
-exports.pauseSubscription = async (req, res) => {
+exports.pauseSubscription_old = async (req, res) => {
   try {
     const { id } = req.params; // Subscription ID
     const { pausedDates } = req.body; // Array of dates to be paused
@@ -561,6 +561,107 @@ exports.pauseSubscription = async (req, res) => {
   }
 };
 
+// ...existing code...
+exports.pauseSubscription = async (req, res) => {
+  try {
+    const { id } = req.params; // Subscription ID
+    const { pausedDates } = req.body; // Array of dates to be paused
+
+    // Step 1: Validate and parse paused dates
+    const validDates = parseAndValidatePausedDates(pausedDates, res);
+    if (!validDates) return;
+
+    // Step 2: Find the subscription
+    const subscription = await Subscription.findByPk(id);
+    if (!subscription) {
+      return res.status(404).json({ message: 'Subscription not found' });
+    }
+
+    // Step 3: Get allowed delivery days for the meal frequency
+    const allowedDays = getAllowedDeliveryDays(subscription.mealFrequency, res);
+    if (!allowedDays) return;
+
+    // Step 4: Filter paused dates to only valid delivery days
+    const newPausedDeliveryDays = filterPausedDeliveryDays(validDates, allowedDays);
+
+    // Step 5: Get previously paused dates
+    const prevPausedDays = Array.isArray(subscription.pausedDates) ? subscription.pausedDates.map(d => new Date(d).toISOString()) : [];
+
+    // Step 6: Find newly paused and unpaused dates
+    const newPausedDaysISO = newPausedDeliveryDays.map(d => new Date(d).toISOString());
+    const addedPausedDays = newPausedDaysISO.filter(d => !prevPausedDays.includes(d));
+    const removedPausedDays = prevPausedDays.filter(d => !newPausedDaysISO.includes(d));
+
+    // Step 7: Mark orders for newly paused days as canceled
+    await markOrdersAsCanceled(subscription.id, addedPausedDays.map(d => new Date(d)));
+
+    // Step 8: Restore orders for unpaused days
+    await restoreOrdersForUnpausedDays(subscription.id, removedPausedDays.map(d => new Date(d)));
+
+    // Step 9: Adjust end date
+    // Only extend for newly paused days, and reduce for unpaused days
+    let newEndDate = new Date(subscription.endDate);
+    newEndDate.setDate(newEndDate.getDate() + addedPausedDays.length - removedPausedDays.length);
+
+    subscription.endDate = newEndDate;
+    subscription.pausedDates = newPausedDeliveryDays;
+    await subscription.save();
+
+    // Step 10: Create new orders for the extended days (if any)
+    if (addedPausedDays.length > 0) {
+      await createOrdersForExtendedDays(subscription, addedPausedDays.length);
+    }
+
+    // Notify the restaurant about the pause
+    const consumer = await Consumer.findByPk(subscription.consumerId);
+    const restaurant = await Restaurant.findByPk(subscription.restaurantId);
+    if (consumer && restaurant) {
+      await Notification.create({
+        ReceiverId: restaurant.userId,
+        SenderId: consumer.userId,
+        NotificationMessage: `Subscription for "${consumer.name}" has been updated for paused dates.`,
+        NotificationType: 'Subscription Paused',
+        NotificationMetadata: { subscriptionId: subscription.id, pausedDates: newPausedDeliveryDays },
+      });
+    }
+
+    res.status(200).json({
+      message: 'Subscription end date updated successfully based on paused dates',
+      subscription,
+    });
+  } catch (error) {
+    console.error('Error updating subscription end date:', error);
+    res.status(500).json({ message: 'Internal server error', error });
+  }
+};
+
+// Helper to restore orders for unpaused days
+const restoreOrdersForUnpausedDays = async (subscriptionId, unpausedDays) => {
+  try {
+    const normalizedUnpausedDays = unpausedDays.map(date => {
+      const normalizedDate = new Date(date);
+      normalizedDate.setHours(0, 0, 0, 0);
+      return normalizedDate;
+    });
+    await Order.update(
+      { status: 'pending' },
+      {
+        where: {
+          subscriptionId,
+          orderDate: {
+            [Op.in]: normalizedUnpausedDays,
+          },
+          status: 'cancelled'
+        },
+      }
+    );
+    console.log(`Orders for subscription ${subscriptionId} on unpaused days restored to pending.`);
+  } catch (error) {
+    console.error('Error restoring orders for unpaused days:', error);
+    throw error;
+  }
+};
+// ...existing code...
 
 const markOrdersAsCanceled = async (subscriptionId, pausedDeliveryDays) => {
   try {
