@@ -135,7 +135,7 @@ exports.createSubscription = async (req, res) => {
     res.status(500).json({ message: 'Internal server error', error });
   }
 };
-const adjustSubscriptionEndDate = (startDate, endDate, closeDays, mealFrequency) => {
+const adjustSubscriptionEndDate_old = (startDate, endDate, closeDays, mealFrequency) => {
   const subscriptionStart = new Date(startDate);
   let subscriptionEnd = new Date(endDate);
 
@@ -156,6 +156,38 @@ const adjustSubscriptionEndDate = (startDate, endDate, closeDays, mealFrequency)
 
     if (overlappingCloseDays.length > 0) {
       subscriptionEnd.setDate(subscriptionEnd.getDate() + overlappingCloseDays.length);
+    }
+  }
+
+  return subscriptionEnd;
+};
+
+const adjustSubscriptionEndDate = (startDate, endDate, closeDays, mealFrequency) => {
+  const subscriptionStart = new Date(startDate);
+  let subscriptionEnd = new Date(endDate);
+
+  // Get allowed delivery days for the meal frequency
+  const allowedDays = mealFrequencyConfig[mealFrequency];
+  if (!allowedDays) {
+    return subscriptionEnd;
+  }
+
+  if (closeDays && Array.isArray(closeDays)) {
+    // Only consider close days that are within the subscription period and on allowed delivery days
+    const validCloseDays = closeDays.filter(closeDay => {
+      const closeDate = new Date(closeDay);
+      const isWithinRange = closeDate >= subscriptionStart && closeDate <= subscriptionEnd;
+      const isAllowedDay = allowedDays.includes(closeDate.getDay());
+      return isWithinRange && isAllowedDay;
+    });
+
+    // Extend only by the number of valid delivery close days
+    let added = 0;
+    while (added < validCloseDays.length) {
+      subscriptionEnd.setDate(subscriptionEnd.getDate() + 1);
+      if (allowedDays.includes(subscriptionEnd.getDay())) {
+        added++;
+      }
     }
   }
 
@@ -620,7 +652,18 @@ exports.pauseSubscription = async (req, res) => {
     subscription.pausedDates = newPausedDeliveryDays;
     await subscription.save();
 
-  
+    // Cancel orders that are now outside the new end date
+    await Order.update(
+      { status: 'cancelled' },
+      {
+        where: {
+          subscriptionId: subscription.id,
+          orderDate: { [Op.gt]: newEndDate },
+          status: { [Op.not]: 'cancelled' }
+        }
+      }
+    );
+
 
     // Step 10: Create new orders for the extended days (if any)
     if (addedDeliveryDays.length > 0) {
