@@ -598,18 +598,27 @@ exports.pauseSubscription = async (req, res) => {
     // Step 8: Restore orders for unpaused days
     await restoreOrdersForUnpausedDays(subscription.id, removedPausedDays.map(d => new Date(d)));
 
-    // Step 9: Adjust end date
-    // Only extend for newly paused days, and reduce for unpaused days
+  // Step 9: Adjust end date
+    // Only extend for newly paused delivery days, and reduce for unpaused delivery days
+    const addedDeliveryDays = addedPausedDays
+      .map(d => new Date(d))
+      .filter(date => allowedDays.includes(date.getDay()));
+    const removedDeliveryDays = removedPausedDays
+      .map(d => new Date(d))
+      .filter(date => allowedDays.includes(date.getDay()));
+
     let newEndDate = new Date(subscription.endDate);
-    newEndDate.setDate(newEndDate.getDate() + addedPausedDays.length - removedPausedDays.length);
+    newEndDate.setDate(
+      newEndDate.getDate() + addedDeliveryDays.length - removedDeliveryDays.length
+    );
 
     subscription.endDate = newEndDate;
     subscription.pausedDates = newPausedDeliveryDays;
     await subscription.save();
 
     // Step 10: Create new orders for the extended days (if any)
-    if (addedPausedDays.length > 0) {
-      await createOrdersForExtendedDays(subscription, addedPausedDays.length);
+    if (addedDeliveryDays.length > 0) {
+      await createOrdersForExtendedDays(subscription, addedDeliveryDays.length);
     }
 
     // Notify the restaurant about the pause
