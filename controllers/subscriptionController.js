@@ -163,49 +163,35 @@ const adjustSubscriptionEndDate_old = (startDate, endDate, closeDays, mealFreque
 };
 
 const adjustSubscriptionEndDate = (startDate, endDate, closeDays, mealFrequency) => {
-  // Calculate the required number of valid delivery days (orders)
   const subscriptionStart = new Date(startDate);
-  const originalEnd = new Date(endDate);
+  let subscriptionEnd = new Date(endDate);
+
+  // Get allowed delivery days for the meal frequency
   const allowedDays = mealFrequencyConfig[mealFrequency];
   if (!allowedDays) {
-    return originalEnd;
+    return subscriptionEnd;
   }
 
-  // Normalize closeDays to YYYY-MM-DD for easy comparison
-  const closeDaySet = new Set((closeDays || []).map(d => {
-    const date = new Date(d);
-    date.setHours(0,0,0,0);
-    return date.getTime();
-  }));
+  if (closeDays && Array.isArray(closeDays)) {
+    // Only consider close days that are within the subscription period and on allowed delivery days
+    const validCloseDays = closeDays.filter(closeDay => {
+      const closeDate = new Date(closeDay);
+      const isWithinRange = closeDate >= subscriptionStart && closeDate <= subscriptionEnd;
+      const isAllowedDay = allowedDays.includes(closeDate.getDay());
+      return isWithinRange && isAllowedDay;
+    });
 
-  // Count required delivery days between startDate and endDate
-  let requiredOrders = 0;
-  let tempDate = new Date(subscriptionStart);
-  while (tempDate <= originalEnd) {
-    const dayOfWeek = tempDate.getDay();
-    const normalized = new Date(tempDate);
-    normalized.setHours(0,0,0,0);
-    if (allowedDays.includes(dayOfWeek) && !closeDaySet.has(normalized.getTime())) {
-      requiredOrders++;
+    // Extend only by the number of valid delivery close days
+    let added = 0;
+    while (added < validCloseDays.length) {
+      subscriptionEnd.setDate(subscriptionEnd.getDate() + 1);
+      if (allowedDays.includes(subscriptionEnd.getDay())) {
+        added++;
+      }
     }
-    tempDate.setDate(tempDate.getDate() + 1);
   }
 
-  // Now, extend the end date until we have delivered requiredOrders valid delivery days
-  let delivered = 0;
-  let newEndDate = new Date(subscriptionStart);
-  while (delivered < requiredOrders) {
-    const dayOfWeek = newEndDate.getDay();
-    const normalized = new Date(newEndDate);
-    normalized.setHours(0,0,0,0);
-    if (allowedDays.includes(dayOfWeek) && !closeDaySet.has(normalized.getTime())) {
-      delivered++;
-    }
-    if (delivered < requiredOrders) {
-      newEndDate.setDate(newEndDate.getDate() + 1);
-    }
-  }
-  return newEndDate;
+  return subscriptionEnd;
 };
 
 exports.updateSubscription = async (req, res) => {
