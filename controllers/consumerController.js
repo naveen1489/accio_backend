@@ -611,7 +611,7 @@ exports.getOrdersForConsumer = async (req, res) => {
     // Build filter
     const where = {
       userId: consumer.id,
-      orderDate: { [Op.lte]: new Date() }, // till today
+      //orderDate: { [Op.lte]: new Date() }, // till today
     };
     if (status) where.status = status;
     if (startDate) where.orderDate[Op.gte] = new Date(startDate);
