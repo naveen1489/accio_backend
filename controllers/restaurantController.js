@@ -498,21 +498,54 @@ exports.updateCloseDates = async (req, res) => {
       // Mark orders as canceled for each close date
       await markOrdersAsCanceledForSpecificDates(restaurantId, closeDays);
 
-      // Update subscriptions' end dates based on total close days
-      await updateSubscriptionsEndDateForSpecificDates(restaurantId, closeDays);
-
-      // Create new orders for extended days
-      await createOrdersForExtendedDaysForSpecificDates(restaurantId, closeDays);
-   
-   // --- Send notifications to all consumers in subscriptions ---
+      // --- Only count valid delivery days for extension ---
       const subscriptions = await Subscription.findAll({ where: { restaurantId } });
       const { Notification, Consumer } = require('../models');
-    // ...existing code...
       for (const subscription of subscriptions) {
+        const allowedDays = mealFrequencyConfig[subscription.mealFrequency];
+        if (!allowedDays) continue;
+        // Only count close days that are valid delivery days
+        const validCloseDays = closeDays.filter(d => allowedDays.includes(new Date(d).getDay()));
+        let newEndDate = new Date(subscription.endDate);
+        let added = 0;
+        while (added < validCloseDays.length) {
+          newEndDate.setDate(newEndDate.getDate() + 1);
+          if (allowedDays.includes(newEndDate.getDay())) {
+            added++;
+          }
+        }
+        subscription.endDate = newEndDate;
+        await subscription.save();
+
+        // Create new orders for the extended days
+        let currentDate = new Date(subscription.endDate);
+        const newOrders = [];
+        let ordersToCreate = validCloseDays.length;
+        while (ordersToCreate > 0) {
+          currentDate.setDate(currentDate.getDate() + 1);
+          if (allowedDays.includes(currentDate.getDay())) {
+            newOrders.push({
+              subscriptionId: subscription.id,
+              restaurantId,
+              menuId: subscription.menuId,
+              addressId: subscription.addressId,
+              userId: subscription.consumerId,
+              orderDate: new Date(currentDate),
+              status: 'pending',
+              orderNumber: Math.floor(1000000000000000 + Math.random() * 9000000000000000).toString(),
+            });
+            ordersToCreate--;
+          }
+        }
+        if (newOrders.length > 0) {
+          await Order.bulkCreate(newOrders);
+        }
+
+        // --- Send notifications to all consumers in subscriptions ---
         const consumer = await Consumer.findByPk(subscription.consumerId);
         if (consumer) {
           // Format close days as YYYY-MM-DD and limit to 3 dates for the message
-          const formattedDates = closeDays.map(d => new Date(d).toISOString().split('T')[0]);
+          const formattedDates = validCloseDays.map(d => new Date(d).toISOString().split('T')[0]);
           let messageDates = formattedDates.slice(0, 3).join(', ');
           if (formattedDates.length > 3) {
             messageDates += ` and ${formattedDates.length - 3} more`;
@@ -528,9 +561,6 @@ exports.updateCloseDates = async (req, res) => {
           });
         }
       }
-// ...existing code...
-      // -----------------------------------------------------------
- 
     }
    
     // Update closeDays field with the array of dates
